@@ -25,6 +25,30 @@ class EnvConfig {
   /// The WooCommerce REST API Consumer Secret (cs_...).
   static String get consumerSecret => dotenv.env[_keyConsumerSecret] ?? '';
 
+  static const String _keyWordpressUsername = 'WORDPRESS_USERNAME';
+  static const String _keyWordpressAppPassword = 'WORDPRESS_APP_PASSWORD';
+
+  static String? _customWordpressUsername;
+  static String? _customWordpressAppPassword;
+
+  /// The WordPress Administrator Username (optional for Media API).
+  static String get wordpressUsername =>
+      _customWordpressUsername ?? dotenv.env[_keyWordpressUsername] ?? '';
+
+  /// The WordPress Application Password (optional for Media API).
+  static String get wordpressAppPassword =>
+      _customWordpressAppPassword ?? dotenv.env[_keyWordpressAppPassword] ?? '';
+
+  /// Sets or clears dynamic in-memory WordPress Application Password credentials.
+  static void setWordpressCredentials({String? username, String? appPassword}) {
+    _customWordpressUsername = username;
+    _customWordpressAppPassword = appPassword;
+  }
+
+  /// Returns whether a dedicated WordPress Application Password is configured.
+  static bool get hasWordpressAppPassword =>
+      wordpressUsername.isNotEmpty && wordpressAppPassword.isNotEmpty;
+
   /// Returns whether all mandatory WooCommerce credentials have been configured.
   static bool get isConfigured =>
       baseUrl.isNotEmpty && consumerKey.isNotEmpty && consumerSecret.isNotEmpty;

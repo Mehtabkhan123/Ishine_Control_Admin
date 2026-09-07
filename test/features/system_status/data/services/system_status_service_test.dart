@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ishine_admin_app/core/network/network_exceptions.dart';
 import 'package:ishine_admin_app/features/system_status/data/services/system_status_service.dart';
 import 'package:mocktail/mocktail.dart';
 

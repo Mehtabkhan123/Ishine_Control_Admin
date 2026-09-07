@@ -96,3 +96,19 @@ class WooCommerceException implements Exception {
   @override
   String toString() => 'WooCommerceException(statusCode: $statusCode, message: $message)';
 }
+
+/// Exception thrown specifically when response payload fails JSON deserialization.
+class WooCommerceParseException extends WooCommerceException {
+  final dynamic originalData;
+  final StackTrace? stackTrace;
+
+  const WooCommerceParseException({
+    required super.message,
+    super.statusCode,
+    this.originalData,
+    this.stackTrace,
+  }) : super(errorData: originalData);
+
+  @override
+  String toString() => 'WooCommerceParseException: $message (statusCode: $statusCode)';
+}

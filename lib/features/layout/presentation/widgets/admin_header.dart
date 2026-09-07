@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_cubit.dart';
+import '../../../../core/widgets/app_brand_logo.dart';
 import '../../../reports/bloc/sales_report_bloc.dart';
 import '../../../reports/bloc/sales_report_event.dart';
 import '../../../reports/bloc/top_sellers_bloc.dart';
@@ -66,6 +67,27 @@ class AdminHeader extends StatelessWidget implements PreferredSizeWidget {
             children: [
               Row(
                 children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF141C2E) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const AppBrandLogo(),
+                  ),
                   Text(
                     title,
                     style: TextStyle(

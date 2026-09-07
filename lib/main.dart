@@ -5,6 +5,11 @@ import 'core/network/dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/layout/presentation/widgets/admin_scaffold.dart';
+import 'features/products/bloc/create_product_bloc.dart';
+import 'features/products/bloc/update_product_bloc.dart';
+import 'features/products/bloc/products_bloc.dart';
+import 'features/products/bloc/products_event.dart';
+import 'features/products/data/repositories/products_repository.dart';
 import 'features/reports/bloc/sales_report_bloc.dart';
 import 'features/reports/bloc/sales_report_event.dart';
 import 'features/reports/bloc/top_sellers_bloc.dart';
@@ -18,6 +23,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load store credentials and config from .env
+
   try {
     await EnvConfig.init();
   } catch (e) {
@@ -28,11 +34,13 @@ Future<void> main() async {
   final dioClient = WooCommerceDioClient();
   final systemStatusRepository = SystemStatusRepository(dioClient: dioClient);
   final reportsRepository = ReportsRepository(dioClient: dioClient);
+  final productsRepository = ProductsRepository(dioClient: dioClient);
 
   runApp(
     IShineAdminApp(
       systemStatusRepository: systemStatusRepository,
       reportsRepository: reportsRepository,
+      productsRepository: productsRepository,
     ),
   );
 }
@@ -40,11 +48,13 @@ Future<void> main() async {
 class IShineAdminApp extends StatelessWidget {
   final SystemStatusRepository systemStatusRepository;
   final ReportsRepository reportsRepository;
+  final ProductsRepository productsRepository;
 
   const IShineAdminApp({
     super.key,
     required this.systemStatusRepository,
     required this.reportsRepository,
+    required this.productsRepository,
   });
 
   @override
@@ -55,12 +65,11 @@ class IShineAdminApp extends StatelessWidget {
           value: systemStatusRepository,
         ),
         RepositoryProvider<ReportsRepository>.value(value: reportsRepository),
+        RepositoryProvider<ProductsRepository>.value(value: productsRepository),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider<ThemeCubit>(
-            create: (context) => ThemeCubit(),
-          ),
+          BlocProvider<ThemeCubit>(create: (context) => ThemeCubit()),
           BlocProvider<SystemStatusBloc>(
             create: (context) =>
                 SystemStatusBloc(repository: systemStatusRepository)
@@ -75,6 +84,19 @@ class IShineAdminApp extends StatelessWidget {
             create: (context) =>
                 TopSellersBloc(repository: reportsRepository)
                   ..add(const TopSellersFetchRequested()),
+          ),
+          BlocProvider<ProductsBloc>(
+            create: (context) =>
+                ProductsBloc(repository: productsRepository)
+                  ..add(const ProductsFetchRequested()),
+          ),
+          BlocProvider<CreateProductBloc>(
+            create: (context) =>
+                CreateProductBloc(repository: productsRepository),
+          ),
+          BlocProvider<UpdateProductBloc>(
+            create: (context) =>
+                UpdateProductBloc(repository: productsRepository),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(

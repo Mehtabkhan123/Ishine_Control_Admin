@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_brand_logo.dart';
 import '../../../system_status/bloc/system_status_bloc.dart';
 
 class AdminNavRailItem {
@@ -159,8 +160,9 @@ class AdminNavRail extends StatelessWidget {
         child: Container(
           width: 40,
           height: 40,
+          padding: const EdgeInsets.all(5),
           decoration: BoxDecoration(
-            gradient: AppColors.brandGradient,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -170,11 +172,7 @@ class AdminNavRail extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.auto_awesome_rounded,
-            color: Colors.white,
-            size: 20,
-          ),
+          child: const AppBrandLogo(),
         ),
       );
     }
@@ -191,8 +189,9 @@ class AdminNavRail extends StatelessWidget {
                 Container(
                   width: 38,
                   height: 38,
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    gradient: AppColors.brandGradient,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -202,11 +201,7 @@ class AdminNavRail extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: const AppBrandLogo(),
                 ),
                 const SizedBox(width: 10),
                 Expanded(

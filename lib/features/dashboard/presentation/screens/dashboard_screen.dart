@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_brand_logo.dart';
 import '../../../layout/presentation/widgets/system_status_dialog.dart';
 import '../../../reports/presentation/widgets/sales_report_dashboard_section.dart';
 import '../../../reports/presentation/widgets/top_sellers_dashboard_section.dart';
@@ -110,44 +111,116 @@ class DashboardScreen extends StatelessWidget {
           final content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.3),
+              if (isCompact) ...[
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF141C2E) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.primary.withValues(alpha: 0.3)
+                              : AppColors.primary.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.08),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: const AppBrandLogo(),
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.success,
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.3),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'LIVE STORE DASHBOARD',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                            color: AppColors.primaryLight,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.success,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Flexible(
+                              child: Text(
+                                'LIVE STORE DASHBOARD',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: AppColors.primaryLight,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.success,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'LIVE STORE DASHBOARD',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: AppColors.primaryLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 '$greeting, Administrator 👋',
@@ -256,25 +329,31 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Expanded(child: content),
               const SizedBox(width: 24),
-              // Glowing Visual Emblem
+              // Glowing Visual Emblem with Noback-preview Logo
               Container(
-                width: 88,
-                height: 88,
+                width: 96,
+                height: 96,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: AppColors.brandGradient,
-                  borderRadius: BorderRadius.circular(26), // Large squircle
+                  color: isDark ? const Color(0xFF141C2E) : Colors.white,
+                  borderRadius: BorderRadius.circular(24), // One UI squircle
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.primary.withValues(alpha: 0.35)
+                        : AppColors.primary.withValues(alpha: 0.18),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
+                      color: AppColors.primary.withValues(alpha: isDark ? 0.35 : 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.storefront_rounded,
-                  color: Colors.white,
-                  size: 44,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: const AppBrandLogo(),
                 ),
               ),
             ],

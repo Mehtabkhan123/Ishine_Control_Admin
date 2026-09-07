@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/network_exceptions.dart';
+export '../../../../core/network/network_exceptions.dart';
 import '../models/system_status_model.dart';
 
 
@@ -18,22 +19,6 @@ enum WooCommerceAuthMode {
 
   /// Automatically picks [header] for HTTPS, and [queryParameters] for non-SSL HTTP.
   auto,
-}
-
-/// Exception thrown specifically when response payload fails JSON deserialization.
-class WooCommerceParseException extends WooCommerceException {
-  final dynamic originalData;
-  final StackTrace? stackTrace;
-
-  const WooCommerceParseException({
-    required super.message,
-    super.statusCode,
-    this.originalData,
-    this.stackTrace,
-  }) : super(errorData: originalData);
-
-  @override
-  String toString() => 'WooCommerceParseException: $message (statusCode: $statusCode)';
 }
 
 /// API Service responsible for querying WooCommerce System Status endpoint:

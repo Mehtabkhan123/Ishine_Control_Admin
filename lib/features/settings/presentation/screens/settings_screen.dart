@@ -347,11 +347,37 @@ class SettingsScreen extends StatelessWidget {
           ),
           _buildConfigItem(
             context: context,
+            label: 'Media Upload Pipeline',
+            value: EnvConfig.hasWordpressAppPassword
+                ? 'WordPress Core API (${EnvConfig.wordpressUsername})'
+                : 'Smart Cloud Staging + Auto Sideload (Zero Config)',
+            icon: Icons.cloud_upload_outlined,
+            isDark: isDark,
+            canCopy: false,
+          ),
+          _buildConfigItem(
+            context: context,
             label: 'Configuration Driver',
             value: 'flutter_dotenv (.env asset file)',
             icon: Icons.description_outlined,
             isDark: isDark,
             canCopy: false,
+          ),
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: () => _showWordpressConfigDialog(context),
+              icon: const Icon(Icons.vpn_key_rounded, size: 16),
+              label: Text(
+                EnvConfig.hasWordpressAppPassword
+                    ? 'Update WordPress Credentials'
+                    : 'Configure WordPress Credentials',
+              ),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           ),
         ],
       ),
@@ -626,6 +652,142 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showWordpressConfigDialog(BuildContext context) {
+    final userController = TextEditingController(text: EnvConfig.wordpressUsername);
+    final passController = TextEditingController(text: EnvConfig.wordpressAppPassword);
+    bool obscure = true;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.brandGradient,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.vpn_key_rounded, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'WordPress Credentials',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Direct media uploads to /wp-json/wp/v2/media require a WordPress admin username and Application Password.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkBackground : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'How to get an Application Password:',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          '1. Log into WP Admin > Users > Profile\n'
+                          '2. Scroll down to "Application Passwords"\n'
+                          '3. Type "Admin App" and click "Add New"\n'
+                          '4. Copy the generated 24-character password and paste below.',
+                          style: TextStyle(fontSize: 11, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: userController,
+                    decoration: InputDecoration(
+                      labelText: 'WordPress Username / Email',
+                      hintText: 'e.g. admin or username',
+                      prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: passController,
+                    obscureText: obscure,
+                    decoration: InputDecoration(
+                      labelText: 'Application Password',
+                      hintText: 'xxxx xxxx xxxx xxxx xxxx xxxx',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => obscure = !obscure),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final u = userController.text.trim();
+                  final p = passController.text.trim();
+                  if (u.isNotEmpty && p.isNotEmpty) {
+                    EnvConfig.setWordpressCredentials(username: u, appPassword: p);
+                    final messenger = ScaffoldMessenger.maybeOf(context);
+                    Navigator.of(dialogCtx).pop();
+                    messenger?.showSnackBar(
+                      const SnackBar(
+                        content: Text('WordPress credentials saved!'),
+                        backgroundColor: AppColors.success,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Save Credentials'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

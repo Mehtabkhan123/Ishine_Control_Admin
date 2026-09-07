@@ -31,6 +31,22 @@ class WooCommerceDioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          final uri = Uri.tryParse(options.path);
+          final isExternal = uri != null &&
+              uri.hasScheme &&
+              EnvConfig.baseUrl.isNotEmpty &&
+              !options.path.startsWith(EnvConfig.baseUrl);
+          if (isExternal) {
+            return handler.next(options);
+          }
+
+          // If the request already has an explicit Authorization header
+          // (such as WordPress Application Password credentials for /wp/v2/media),
+          // preserve it and do not overwrite or strip it.
+          if (options.headers.containsKey('Authorization')) {
+            return handler.next(options);
+          }
+
           final consumerKey = EnvConfig.consumerKey;
           final consumerSecret = EnvConfig.consumerSecret;
 
@@ -143,6 +159,18 @@ class WooCommerceDioClient {
     CancelToken? cancelToken,
   }) async {
     try {
+      if (kIsWeb) {
+        final webParams = Map<String, dynamic>.from(queryParameters ?? {});
+        webParams['_method'] = 'PUT';
+        final response = await _dio.post<T>(
+          path,
+          data: data,
+          queryParameters: webParams,
+          options: options,
+          cancelToken: cancelToken,
+        );
+        return response;
+      }
       final response = await _dio.put<T>(
         path,
         data: data,
