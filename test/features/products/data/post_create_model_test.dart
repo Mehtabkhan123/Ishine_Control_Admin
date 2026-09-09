@@ -101,4 +101,99 @@ void main() {
       expect(product.images?.first.src, 'https://example.com/charger.jpg');
     });
   });
+
+  group('ProductCategoryRef', () {
+    test('fromJson correctly parses WooCommerce category JSON', () {
+      final json = {
+        'id': 42,
+        'name': 'Smartphones',
+        'slug': 'smartphones',
+        'parent': 10,
+        'description': '<p>Latest Android and iOS smartphones.</p>',
+        'display': 'products',
+        'image': {
+          'id': 108,
+          'src': 'https://example.com/smartphones.jpg',
+          'name': 'Smartphones Banner',
+          'alt': 'Smartphones',
+        },
+        'menu_order': 2,
+        'count': 15,
+      };
+
+      final cat = ProductCategoryRef.fromJson(json);
+
+      expect(cat.id, 42);
+      expect(cat.name, 'Smartphones');
+      expect(cat.slug, 'smartphones');
+      expect(cat.parent, 10);
+      expect(cat.description, '<p>Latest Android and iOS smartphones.</p>');
+      expect(cat.display, 'products');
+      expect(cat.image?.id, 108);
+      expect(cat.image?.src, 'https://example.com/smartphones.jpg');
+      expect(cat.menuOrder, 2);
+      expect(cat.count, 15);
+    });
+
+    test('toCreateCategoryPayload formats payload according to WooCommerce API specs', () {
+      final categoryWithImageId = ProductCategoryRef(
+        name: 'Gaming Accessories',
+        slug: 'gaming-accessories',
+        parent: 5,
+        description: 'Keyboards, mice, and headsets.',
+        display: 'subcategories',
+        image: ProductImageRef(id: 77, src: 'https://example.com/image.jpg'),
+        menuOrder: 1,
+      );
+
+      final payload1 = categoryWithImageId.toCreateCategoryPayload();
+      expect(payload1['name'], 'Gaming Accessories');
+      expect(payload1['slug'], 'gaming-accessories');
+      expect(payload1['parent'], 5);
+      expect(payload1['description'], 'Keyboards, mice, and headsets.');
+      expect(payload1['display'], 'subcategories');
+      expect(payload1['image'], {'id': 77});
+      expect(payload1['menu_order'], 1);
+
+      // With image src only
+      final categoryWithImageSrc = ProductCategoryRef(
+        name: 'Watches',
+        image: ProductImageRef(src: 'https://example.com/watch.png'),
+      );
+      final payload2 = categoryWithImageSrc.toCreateCategoryPayload();
+      expect(payload2['name'], 'Watches');
+      expect(payload2['parent'], 0);
+      expect(payload2['image'], {'src': 'https://example.com/watch.png'});
+    });
+
+    test('toWriteJson maintains backward compatibility for product assignments', () {
+      final catWithId = ProductCategoryRef(id: 99, name: 'Laptops');
+      expect(catWithId.toWriteJson(), {'id': 99});
+
+      final catWithNameOnly = ProductCategoryRef(name: 'New Custom Category');
+      expect(catWithNameOnly.toWriteJson(), {'name': 'New Custom Category'});
+    });
+
+    test('copyWith properly copies and updates fields', () {
+      final initial = ProductCategoryRef(
+        id: 1,
+        name: 'Old Name',
+        slug: 'old-name',
+        parent: 0,
+      );
+
+      final updated = initial.copyWith(
+        name: 'New Name',
+        slug: 'new-name',
+        parent: 10,
+        description: 'New Description',
+      );
+
+      expect(updated.id, 1);
+      expect(updated.name, 'New Name');
+      expect(updated.slug, 'new-name');
+      expect(updated.parent, 10);
+      expect(updated.description, 'New Description');
+    });
+  });
 }

@@ -113,7 +113,7 @@ class ProductsRepository {
     );
   }
 
-  /// Uploads media image bytes to WordPress media repository with progress tracking.
+  /// Uploads media image bytes to WooCommerce/WordPress media repository with progress tracking.
   Future<ProductImageRef> uploadMedia({
     required Uint8List bytes,
     required String filename,
@@ -122,6 +122,7 @@ class ProductsRepository {
     String? baseUrl,
     String? consumerKey,
     String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
   }) async {
     return await _mediaService.uploadMedia(
       bytes: bytes,
@@ -131,6 +132,30 @@ class ProductsRepository {
       baseUrl: baseUrl,
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,
+      authMode: authMode,
+    );
+  }
+
+  /// Retrieves store media library items (`GET /wp-json/wp/v2/media`).
+  Future<List<ProductImageRef>> getMediaLibrary({
+    int page = 1,
+    int perPage = 30,
+    String? search,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return await _service.fetchMediaLibrary(
+      page: page,
+      perPage: perPage,
+      search: search,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
     );
   }
 
@@ -226,6 +251,98 @@ class ProductsRepository {
     } finally {
       _inFlightCategoriesRequest = null;
     }
+  }
+
+  /// Creates a new product category in WooCommerce:
+  /// `POST {{baseUrl}}/wp-json/wc/v3/products/categories`
+  /// and automatically invalidates the category cache so that lists and pickers refresh.
+  Future<ProductCategoryRef> createCategory(
+    ProductCategoryRef category, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final created = await _service.createCategory(
+      category: category,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+
+    // Invalidate categories cache so fresh list is fetched everywhere
+    _categoriesCache = null;
+    _categoriesCachedAt = null;
+
+    return created;
+  }
+
+  /// Updates an existing product category in WooCommerce:
+  /// `PUT {{baseUrl}}/wp-json/wc/v3/products/categories/{{categoryId}}`
+  /// and automatically invalidates the category cache so that lists and pickers refresh.
+  Future<ProductCategoryModel> updateCategory({
+    required int categoryId,
+    required ProductCategoryModel category,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final updated = await _service.updateCategory(
+      categoryId: categoryId,
+      category: category,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+
+    // Invalidate categories cache so fresh list is fetched everywhere
+    _categoriesCache = null;
+    _categoriesCachedAt = null;
+
+    return updated;
+  }
+
+  /// Deletes a product category in WooCommerce:
+  /// `DELETE {{baseUrl}}/wp-json/wc/v3/products/categories/{{categoryId}}?force=true`
+  /// and automatically invalidates the category cache.
+  Future<bool> deleteCategory({
+    required int categoryId,
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final result = await _service.deleteCategory(
+      categoryId: categoryId,
+      force: force,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+
+    // Invalidate categories cache so fresh list is fetched everywhere
+    _categoriesCache = null;
+    _categoriesCachedAt = null;
+
+    return result;
+  }
+
+  /// Explicitly clears category cache
+  void clearCategoriesCache() {
+    _categoriesCache = null;
+    _categoriesCachedAt = null;
+    _inFlightCategoriesRequest = null;
   }
 
   /// Retrieves tags with caching and deduplication.

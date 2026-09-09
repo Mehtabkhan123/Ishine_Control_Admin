@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/safe_network_image.dart';
 import '../../bloc/products_bloc.dart';
 import '../../bloc/products_event.dart';
 import '../../bloc/products_state.dart';
 import '../../data/models/post_create_model.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
+import '../widgets/create_category_dialog.dart';
 
 /// Redesigned Products Catalog Screen with Samsung One UI aesthetics.
 /// Connected to live WooCommerce REST API v3 via [ProductsBloc].
@@ -45,6 +47,44 @@ class _ProductsScreenState extends State<ProductsScreen> {
     ).push<bool>(AddProductScreen.route());
     if (created == true && mounted) {
       context.read<ProductsBloc>().add(const ProductsRefreshRequested());
+    }
+  }
+
+  void _openAddCategory() async {
+    final created = await CreateCategoryDialog.show(context);
+    if (created != null && mounted) {
+      context.read<ProductsBloc>().add(ProductsCategoryAdded(created));
+      context.read<ProductsBloc>().add(const ProductsCategoriesRefreshRequested());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Category '${created.name}' created successfully!",
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  void _openEditCategory(ProductCategoryRef category) async {
+    final updated = await CreateCategoryDialog.show(
+      context,
+      categoryToEdit: category,
+    );
+    if (updated != null && mounted) {
+      context.read<ProductsBloc>().add(ProductsCategoryUpdated(updated));
+      context.read<ProductsBloc>().add(const ProductsCategoriesRefreshRequested());
     }
   }
 
@@ -375,6 +415,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   },
                 ),
                 const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _openAddCategory,
+                  icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+                  label: Text(isCompact ? 'Category' : 'Add Category'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : AppColors.lightBorder,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 FilledButton.icon(
                   onPressed: _openAddProduct,
                   icon: const Icon(Icons.add_rounded, size: 18),
@@ -412,8 +475,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       value: catValue,
                       isSelected: selectedCategory == catValue,
                       isDark: isDark,
+                      category: cat,
                     );
                   }),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 8),
+                    child: ActionChip(
+                      avatar: const Icon(
+                        Icons.add_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      label: const Text(
+                        'New Category',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      backgroundColor: AppColors.primary
+                          .withValues(alpha: isDark ? 0.15 : 0.08),
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      onPressed: _openAddCategory,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -428,38 +519,71 @@ class _ProductsScreenState extends State<ProductsScreen> {
     required String value,
     required bool isSelected,
     required bool isDark,
+    ProductCategoryRef? category,
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: () {
-          context.read<ProductsBloc>().add(ProductsCategoryChanged(value));
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.darkBackground : const Color(0xFFF1F5F9)),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
+      child: Tooltip(
+        message: category != null
+            ? (isSelected
+                ? '$label (Tap to filter, long-press to edit/delete)'
+                : '$label (Long-press to edit/delete)')
+            : label,
+        child: InkWell(
+          onTap: () {
+            context.read<ProductsBloc>().add(ProductsCategoryChanged(value));
+          },
+          onLongPress: category != null ? () => _openEditCategory(category) : null,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.primary
-                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                  : (isDark ? AppColors.darkBackground : const Color(0xFFF1F5F9)),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected
-                  ? Colors.white
-                  : (isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary),
+                  ),
+                ),
+                if (category != null && isSelected) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () => _openEditCategory(category),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit_rounded,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -700,18 +824,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: imageUrl == null
-                          ? AppColors.brandGradient
-                          : null,
-                      borderRadius: BorderRadius.circular(
-                        14,
-                      ), // One UI Squircle
-                      image: imageUrl != null && imageUrl.isNotEmpty
-                          ? DecorationImage(
-                              image: NetworkImage(imageUrl),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                      borderRadius: BorderRadius.circular(14), // One UI Squircle
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.primary.withValues(alpha: 0.2),
@@ -720,15 +833,40 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         ),
                       ],
                     ),
-                    child: imageUrl == null
-                        ? const Center(
-                            child: Icon(
-                              Icons.inventory_2_rounded,
-                              color: Colors.white,
-                              size: 22,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: imageUrl != null && imageUrl.isNotEmpty
+                          ? SafeNetworkImage(
+                              imageUrl: imageUrl,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorWidget: Container(
+                                decoration: const BoxDecoration(
+                                  gradient: AppColors.brandGradient,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.inventory_2_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              decoration: const BoxDecoration(
+                                gradient: AppColors.brandGradient,
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.inventory_2_rounded,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
                             ),
-                          )
-                        : null,
+                    ),
                   ),
                   const SizedBox(width: 14),
 

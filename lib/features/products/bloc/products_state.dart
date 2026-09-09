@@ -49,8 +49,8 @@ class ProductsSuccess extends ProductsState {
       if (selectedCategory != 'all') {
         final matchesCat = p.categories?.any(
               (c) =>
-                  c.slug?.toLowerCase() == selectedCategory.toLowerCase() ||
-                  c.name?.toLowerCase() == selectedCategory.toLowerCase(),
+                  (c.slug ?? '').toLowerCase() == selectedCategory.toLowerCase() ||
+                  (c.name ?? '').toLowerCase() == selectedCategory.toLowerCase(),
             ) ??
             false;
         if (!matchesCat) return false;

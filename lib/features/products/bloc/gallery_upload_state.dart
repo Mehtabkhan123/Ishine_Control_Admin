@@ -28,6 +28,12 @@ class GalleryUploadState extends Equatable {
   bool get hasPendingUploads => pendingUploadCount > 0;
   bool get allUploaded => hasItems && items.every((i) => i.isUploaded);
 
+  /// Number of images in gallery that are not linked to a URL or Media Library ID.
+  int get unlinkedCount => items.where((i) => !i.isUploaded).length;
+  bool get hasUnlinkedItems => unlinkedCount > 0;
+  List<GalleryImageItem> get unlinkedItems =>
+      items.where((i) => !i.isUploaded).toList();
+
   /// Converts current ordered gallery items into WooCommerce [ProductImageRef]s.
   List<ProductImageRef> toProductImageRefs() {
     return items

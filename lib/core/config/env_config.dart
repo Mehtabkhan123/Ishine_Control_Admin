@@ -1,6 +1,5 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Configuration manager for environment variables loaded via flutter_dotenv.
 class EnvConfig {
   EnvConfig._();
 
@@ -16,7 +15,9 @@ class EnvConfig {
   /// The base URL of the WooCommerce store (e.g. https://example.com).
   static String get baseUrl {
     final rawUrl = dotenv.env[_keyBaseUrl] ?? '';
-    return rawUrl.endsWith('/') ? rawUrl.substring(0, rawUrl.length - 1) : rawUrl;
+    return rawUrl.endsWith('/')
+        ? rawUrl.substring(0, rawUrl.length - 1)
+        : rawUrl;
   }
 
   /// The WooCommerce REST API Consumer Key (ck_...).

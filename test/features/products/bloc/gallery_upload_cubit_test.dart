@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ishine_admin_app/core/network/network_exceptions.dart';
 import 'package:ishine_admin_app/features/products/bloc/gallery_upload_cubit.dart';
 import 'package:ishine_admin_app/features/products/data/models/gallery_image_item.dart';
 import 'package:ishine_admin_app/features/products/data/models/post_create_model.dart';
@@ -45,6 +46,54 @@ void main() {
       expect(cubit.state.items[1].id, 102);
       expect(cubit.state.items[1].remoteUrl, 'https://example.com/img2.jpg');
       expect(cubit.state.items[1].status, GalleryImageStatus.success);
+    });
+
+    test('addImageUrl adds an image URL directly with success status', () {
+      final cubit = GalleryUploadCubit(repository: mockRepository);
+
+      cubit.addImageUrl('https://example.com/product_test.png', name: 'Product Front');
+
+      expect(cubit.state.items.length, 1);
+      expect(cubit.state.items.first.remoteUrl, 'https://example.com/product_test.png');
+      expect(cubit.state.items.first.name, 'Product Front');
+      expect(cubit.state.items.first.status, GalleryImageStatus.success);
+      expect(cubit.state.items.first.isUploaded, isTrue);
+
+      final refs = cubit.state.toProductImageRefs();
+      expect(refs.length, 1);
+      expect(refs.first.src, 'https://example.com/product_test.png');
+    });
+
+    test('addImageUrls adds multiple URLs in bulk', () {
+      final cubit = GalleryUploadCubit(repository: mockRepository);
+
+      cubit.addImageUrls([
+        'https://example.com/photo1.jpg',
+        'https://example.com/photo2.jpg',
+        '', // empty url should be ignored
+      ]);
+
+      expect(cubit.state.items.length, 2);
+      expect(cubit.state.items[0].remoteUrl, 'https://example.com/photo1.jpg');
+      expect(cubit.state.items[1].remoteUrl, 'https://example.com/photo2.jpg');
+    });
+
+    test('setImageUrl links a remote URL to a local item', () {
+      final cubit = GalleryUploadCubit(repository: mockRepository);
+      final localItem = GalleryImageItem(
+        uniqueId: 'local_1',
+        name: 'camera_photo.jpg',
+        bytes: Uint8List.fromList([1, 2, 3]),
+        status: GalleryImageStatus.idle,
+      );
+      cubit.emit(cubit.state.copyWith(items: [localItem]));
+      expect(cubit.state.items.first.isUploaded, isFalse);
+
+      cubit.setImageUrl(0, 'https://example.com/hosted_camera_photo.jpg');
+
+      expect(cubit.state.items.first.remoteUrl, 'https://example.com/hosted_camera_photo.jpg');
+      expect(cubit.state.items.first.status, GalleryImageStatus.success);
+      expect(cubit.state.items.first.isUploaded, isTrue);
     });
 
     test('reorder reorders images correctly and preserves order', () {
@@ -120,20 +169,33 @@ void main() {
       expect(cubit.state.items.first.id, 2);
     });
 
-    test('toProductImageRefs converts items to ProductImageRef list for WooCommerce', () {
+    test('toProductImageRefs converts only ready items to ProductImageRef list', () {
       final cubit = GalleryUploadCubit(repository: mockRepository);
-      final initialImages = [
-        ProductImageRef(id: 1, src: 'https://example.com/1.jpg', name: 'Photo 1'),
-        ProductImageRef(id: 2, src: 'https://example.com/2.jpg', name: 'Photo 2'),
+      final items = [
+        const GalleryImageItem(
+          uniqueId: '1',
+          name: 'Ready 1',
+          remoteUrl: 'https://example.com/1.jpg',
+          status: GalleryImageStatus.success,
+        ),
+        const GalleryImageItem(
+          uniqueId: '2',
+          name: 'Local Pending',
+          status: GalleryImageStatus.idle,
+        ),
+        const GalleryImageItem(
+          uniqueId: '3',
+          name: 'Ready 2',
+          remoteUrl: 'https://example.com/2.jpg',
+          status: GalleryImageStatus.success,
+        ),
       ];
 
-      cubit.setInitialImages(initialImages);
+      cubit.emit(cubit.state.copyWith(items: items));
       final refs = cubit.state.toProductImageRefs();
 
       expect(refs.length, 2);
-      expect(refs[0].id, 1);
       expect(refs[0].src, 'https://example.com/1.jpg');
-      expect(refs[1].id, 2);
       expect(refs[1].src, 'https://example.com/2.jpg');
     });
 
@@ -153,7 +215,6 @@ void main() {
           ));
 
       final cubit = GalleryUploadCubit(repository: mockRepository);
-      // Inject a local pending item into state
       final pendingItem = GalleryImageItem(
         uniqueId: 'pending_1',
         name: 'sample.jpg',
@@ -170,6 +231,36 @@ void main() {
       expect(cubit.state.items.first.id, 999);
       expect(cubit.state.items.first.remoteUrl, 'https://example.com/uploaded.jpg');
       expect(cubit.state.hasPendingUploads, isFalse);
+    });
+
+    test('uploadPending captures upload error gracefully without crashing', () async {
+      when(() => mockRepository.uploadMedia(
+            bytes: any(named: 'bytes'),
+            filename: any(named: 'filename'),
+            onProgress: any(named: 'onProgress'),
+            cancelToken: any(named: 'cancelToken'),
+            baseUrl: any(named: 'baseUrl'),
+            consumerKey: any(named: 'consumerKey'),
+            consumerSecret: any(named: 'consumerSecret'),
+          )).thenThrow(const WooCommerceException(
+            message: 'Direct media file upload is not supported by WooCommerce REST API keys.',
+            statusCode: 405,
+          ));
+
+      final cubit = GalleryUploadCubit(repository: mockRepository);
+      final pendingItem = GalleryImageItem(
+        uniqueId: 'pending_err',
+        name: 'err.jpg',
+        bytes: Uint8List.fromList([1, 2, 3]),
+        status: GalleryImageStatus.idle,
+      );
+      cubit.emit(cubit.state.copyWith(items: [pendingItem]));
+
+      await cubit.uploadPending();
+
+      expect(cubit.state.isUploading, isFalse);
+      expect(cubit.state.errorMessage, contains('Direct media file upload is not supported'));
+      expect(cubit.state.items.first.status, GalleryImageStatus.error);
     });
   });
 }

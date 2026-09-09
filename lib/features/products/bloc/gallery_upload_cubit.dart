@@ -1,12 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../core/network/network_exceptions.dart';
 import '../data/models/gallery_image_item.dart';
 import '../data/models/post_create_model.dart';
 import '../data/repositories/products_repository.dart';
 import 'gallery_upload_state.dart';
 
-/// Cubit managing product gallery image selection, previews, reordering,
-/// and uploading to the WordPress/WooCommerce media repository.
+/// Cubit managing product gallery image selection, URL attachments, previews,
+/// reordering, and attaching to WooCommerce products.
 class GalleryUploadCubit extends Cubit<GalleryUploadState> {
   final ProductsRepository repository;
   final ImagePicker _imagePicker;
@@ -35,8 +36,178 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     ));
   }
 
-  /// Opens the device gallery allowing multi-selection of product images.
-  Future<void> pickFromGallery({bool autoUpload = true}) async {
+  /// Adds a direct image URL to the product gallery (supported WooCommerce workflow).
+  /// WooCommerce server automatically imports and attaches this image upon product save.
+  void addImageUrl(String url, {String? name}) {
+    final trimmedUrl = url.trim();
+    if (trimmedUrl.isEmpty) return;
+
+    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final extractedName = name ?? _extractFilenameFromUrl(trimmedUrl) ?? 'image_$currentTimestamp.jpg';
+
+    final newItem = GalleryImageItem(
+      uniqueId: 'url_${currentTimestamp}_${state.items.length}',
+      remoteUrl: trimmedUrl,
+      name: extractedName,
+      status: GalleryImageStatus.success,
+      progress: 1.0,
+    );
+
+    final updatedItems = List<GalleryImageItem>.from(state.items)..add(newItem);
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: 'Image URL added to gallery',
+    ));
+  }
+
+  /// Adds multiple direct image URLs to the product gallery.
+  void addImageUrls(List<String> urls) {
+    final validUrls = urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
+    if (validUrls.isEmpty) return;
+
+    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final newItems = <GalleryImageItem>[];
+
+    for (int i = 0; i < validUrls.length; i++) {
+      final url = validUrls[i];
+      final extractedName = _extractFilenameFromUrl(url) ?? 'image_${currentTimestamp}_$i.jpg';
+      newItems.add(
+        GalleryImageItem(
+          uniqueId: 'url_${currentTimestamp}_${state.items.length + i}',
+          remoteUrl: url,
+          name: extractedName,
+          status: GalleryImageStatus.success,
+          progress: 1.0,
+        ),
+      );
+    }
+
+    final updatedItems = List<GalleryImageItem>.from(state.items)..addAll(newItems);
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: '${newItems.length} image URL(s) added to gallery',
+    ));
+  }
+
+  /// Updates or links a direct remote URL to an existing gallery item (e.g. a locally picked image).
+  void setImageUrl(int index, String url) {
+    if (index < 0 || index >= state.items.length) return;
+    final trimmedUrl = url.trim();
+    if (trimmedUrl.isEmpty) return;
+
+    final currentItem = state.items[index];
+    final updatedItem = currentItem.copyWith(
+      remoteUrl: trimmedUrl,
+      status: GalleryImageStatus.success,
+      progress: 1.0,
+      clearError: true,
+    );
+
+    final updatedItems = List<GalleryImageItem>.from(state.items);
+    updatedItems[index] = updatedItem;
+
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: 'Image URL linked to "${currentItem.name}"',
+    ));
+  }
+
+  /// Adds an existing item from the store's media library (`GET /wp-json/wp/v2/media`)
+  /// to the product gallery.
+  void addMediaRef(ProductImageRef ref) {
+    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final newItem = GalleryImageItem(
+      uniqueId: 'media_${ref.id ?? currentTimestamp}_${state.items.length}',
+      id: ref.id,
+      remoteUrl: ref.src,
+      name: ref.name ?? 'Media #${ref.id ?? currentTimestamp}',
+      status: GalleryImageStatus.success,
+      progress: 1.0,
+    );
+
+    final updatedItems = List<GalleryImageItem>.from(state.items)..add(newItem);
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: 'Media added to gallery',
+    ));
+  }
+
+  /// Adds multiple items from the store's media library to the product gallery.
+  void addMediaRefs(List<ProductImageRef> refs) {
+    if (refs.isEmpty) return;
+    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final newItems = <GalleryImageItem>[];
+
+    for (int i = 0; i < refs.length; i++) {
+      final ref = refs[i];
+      newItems.add(
+        GalleryImageItem(
+          uniqueId: 'media_${ref.id ?? currentTimestamp}_${state.items.length + i}',
+          id: ref.id,
+          remoteUrl: ref.src,
+          name: ref.name ?? 'Media #${ref.id ?? (i + 1)}',
+          status: GalleryImageStatus.success,
+          progress: 1.0,
+        ),
+      );
+    }
+
+    final updatedItems = List<GalleryImageItem>.from(state.items)..addAll(newItems);
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: '${newItems.length} media item(s) added from store library',
+    ));
+  }
+
+  /// Links an existing store media library item to a specific gallery position.
+  void setMediaRef(int index, ProductImageRef ref) {
+    if (index < 0 || index >= state.items.length) return;
+    final currentItem = state.items[index];
+    final updatedItem = currentItem.copyWith(
+      id: ref.id,
+      remoteUrl: ref.src,
+      name: ref.name ?? currentItem.name,
+      status: GalleryImageStatus.success,
+      progress: 1.0,
+      clearError: true,
+    );
+
+    final updatedItems = List<GalleryImageItem>.from(state.items);
+    updatedItems[index] = updatedItem;
+
+    emit(state.copyWith(
+      items: updatedItems,
+      clearError: true,
+      successMessage: 'Store media linked to "${currentItem.name}"',
+    ));
+  }
+
+  /// Loads media library items from WooCommerce/WordPress store.
+  Future<List<ProductImageRef>> loadMediaLibrary({
+    String? search,
+    int page = 1,
+    int perPage = 30,
+  }) async {
+    try {
+      return await repository.getMediaLibrary(
+        search: search,
+        page: page,
+        perPage: perPage,
+      );
+    } catch (e) {
+      debugPrint('⚠️ [GalleryUploadCubit] loadMediaLibrary failed: $e');
+      return [];
+    }
+  }
+
+  /// Opens device gallery for multi-selecting product images.
+  /// Decoupled from auto-upload to avoid unauthorized 401 errors.
+  Future<void> pickFromGallery({bool autoUpload = false}) async {
     emit(state.copyWith(isPicking: true, clearError: true));
 
     try {
@@ -52,7 +223,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
       for (int i = 0; i < pickedFiles.length; i++) {
         final file = pickedFiles[i];
         final bytes = await file.readAsBytes();
-        final filename = file.name.isNotEmpty ? file.name : 'product_image_${currentTimestamp}_$i.jpg';
+        final filename = file.name.isNotEmpty
+            ? file.name
+            : 'product_image_${currentTimestamp}_$i.jpg';
 
         newItems.add(
           GalleryImageItem(
@@ -72,6 +245,7 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
         items: updatedItems,
         isPicking: false,
         clearError: true,
+        successMessage: '${newItems.length} photo(s) selected from device',
       ));
 
       if (autoUpload) {
@@ -86,7 +260,8 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
   }
 
   /// Captures a new photo using the device camera.
-  Future<void> captureFromCamera({bool autoUpload = true}) async {
+  /// Decoupled from auto-upload to avoid unauthorized 401 errors.
+  Future<void> captureFromCamera({bool autoUpload = false}) async {
     emit(state.copyWith(isPicking: true, clearError: true));
 
     try {
@@ -115,6 +290,7 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
         items: updatedItems,
         isPicking: false,
         clearError: true,
+        successMessage: 'Photo captured from camera',
       ));
 
       if (autoUpload) {
@@ -180,7 +356,8 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     emit(state.copyWith(items: updated));
   }
 
-  /// Uploads all pending or failed local images to the server.
+  /// Uploads any pending or failed local images to the server.
+  /// Handles errors gracefully without crashing the product screen.
   Future<void> uploadPending() async {
     if (state.isUploading) return;
 
@@ -245,11 +422,12 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
           overallProgress: overall,
         ));
       } catch (e) {
-        firstErrorMessage ??= e.toString();
+        final errorMsg = e is WooCommerceException ? e.message : e.toString();
+        firstErrorMessage ??= errorMsg;
         final errorItems = List<GalleryImageItem>.from(state.items);
         errorItems[index] = errorItems[index].copyWith(
           status: GalleryImageStatus.error,
-          errorMessage: e.toString(),
+          errorMessage: errorMsg,
         );
         emit(state.copyWith(items: errorItems));
       }
@@ -258,7 +436,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     emit(state.copyWith(
       isUploading: false,
       errorMessage: firstErrorMessage,
-      successMessage: completedCount > 0 ? 'Uploaded $completedCount image(s) to product gallery.' : null,
+      successMessage: completedCount > 0
+          ? 'Uploaded $completedCount image(s) to product gallery.'
+          : null,
     ));
   }
 
@@ -281,5 +461,18 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
 
   void clearError() {
     emit(state.copyWith(clearError: true));
+  }
+
+  static String? _extractFilenameFromUrl(String url) {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        final last = uri.pathSegments.last.trim();
+        if (last.isNotEmpty && last.contains('.')) {
+          return last;
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }

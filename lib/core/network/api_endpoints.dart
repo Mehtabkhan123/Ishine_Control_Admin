@@ -17,6 +17,12 @@ class ApiEndpoints {
   /// Specific Product by ID
   static String product(int id) => '$products/$id';
 
+  /// Product Categories
+  static const String productCategories = '$wcV3Prefix/products/categories';
+
+  /// Specific Product Category by ID
+  static String productCategory(int id) => '$productCategories/$id';
+
   /// Customers
   static const String customers = '$wcV3Prefix/customers';
 

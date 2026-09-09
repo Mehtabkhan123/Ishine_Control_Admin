@@ -160,5 +160,58 @@ void main() {
             .having((s) => s.statusCode, 'statusCode', 500),
       ],
     );
+
+    blocTest<ProductsBloc, ProductsState>(
+      'ProductsCategoryAdded adds newly created category to existing categories without duplicates',
+      seed: () => ProductsSuccess(
+        products: sampleProducts,
+        categories: sampleCategories,
+        selectedCategory: 'all',
+        lastUpdated: DateTime.now(),
+      ),
+      build: () => ProductsBloc(repository: mockRepository),
+      act: (bloc) => bloc.add(
+        ProductsCategoryAdded(
+          ProductCategoryRef(id: 3, name: 'Smartphones', slug: 'smartphones'),
+        ),
+      ),
+      expect: () => [
+        isA<ProductsSuccess>().having(
+          (s) => s.categories.length,
+          'categories.length',
+          3,
+        ),
+      ],
+    );
+
+    blocTest<ProductsBloc, ProductsState>(
+      'ProductsCategoriesRefreshRequested updates category list from repository',
+      seed: () => ProductsSuccess(
+        products: sampleProducts,
+        categories: sampleCategories,
+        selectedCategory: 'all',
+        lastUpdated: DateTime.now(),
+      ),
+      setUp: () {
+        when(() => mockRepository.getCategories(forceRefresh: true)).thenAnswer(
+          (_) async => [
+            ...sampleCategories,
+            ProductCategoryRef(id: 99, name: 'Wearables', slug: 'wearables'),
+          ],
+        );
+      },
+      build: () => ProductsBloc(repository: mockRepository),
+      act: (bloc) => bloc.add(const ProductsCategoriesRefreshRequested()),
+      expect: () => [
+        isA<ProductsSuccess>().having(
+          (s) => s.categories.length,
+          'categories.length',
+          3,
+        ),
+      ],
+      verify: (_) {
+        verify(() => mockRepository.getCategories(forceRefresh: true)).called(1);
+      },
+    );
   });
 }

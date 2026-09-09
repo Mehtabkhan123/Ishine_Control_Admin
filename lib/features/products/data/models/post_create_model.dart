@@ -1,3 +1,6 @@
+import 'product_category_model.dart';
+export 'product_category_model.dart';
+
 /// Data model representing a WooCommerce Product for creation and response.
 /// Compatible with WooCommerce REST API v3: `POST /wp-json/wc/v3/products`.
 class PostCreateModel {
@@ -523,35 +526,8 @@ class Dimensions {
   }
 }
 
-class ProductCategoryRef {
-  int? id;
-  String? name;
-  String? slug;
 
-  ProductCategoryRef({this.id, this.name, this.slug});
 
-  ProductCategoryRef.fromJson(Map<String, dynamic> json) {
-    id = json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '');
-    name = json['name']?.toString();
-    slug = json['slug']?.toString();
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (id != null) data['id'] = id;
-    if (name != null) data['name'] = name;
-    if (slug != null) data['slug'] = slug;
-    return data;
-  }
-
-  /// Writeable format for POST /wp-json/wc/v3/products
-  Map<String, dynamic> toWriteJson() {
-    if (id != null && id! > 0) {
-      return {'id': id};
-    }
-    return {'name': name ?? ''};
-  }
-}
 
 class ProductTagRef {
   int? id;

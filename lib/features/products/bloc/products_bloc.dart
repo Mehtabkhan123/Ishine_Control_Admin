@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/network/network_exceptions.dart';
+import '../data/models/post_create_model.dart';
 import '../data/repositories/products_repository.dart';
 import 'products_event.dart';
 import 'products_state.dart';
@@ -14,6 +15,10 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     on<ProductsRefreshRequested>(_onRefreshRequested);
     on<ProductsSearchChanged>(_onSearchChanged);
     on<ProductsCategoryChanged>(_onCategoryChanged);
+    on<ProductsCategoryAdded>(_onCategoryAdded);
+    on<ProductsCategoryUpdated>(_onCategoryUpdated);
+    on<ProductsCategoryDeleted>(_onCategoryDeleted);
+    on<ProductsCategoriesRefreshRequested>(_onCategoriesRefreshRequested);
   }
 
   Future<void> _onFetchRequested(
@@ -47,6 +52,142 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     if (state is ProductsSuccess) {
       final currentState = state as ProductsSuccess;
       emit(currentState.copyWith(selectedCategory: event.category));
+    }
+  }
+
+  void _onCategoryAdded(
+    ProductsCategoryAdded event,
+    Emitter<ProductsState> emit,
+  ) {
+    if (state is ProductsSuccess) {
+      final currentState = state as ProductsSuccess;
+      final existing = currentState.categories;
+      final alreadyExists = existing.any((c) =>
+          (c.id != null && event.category.id != null && c.id == event.category.id) ||
+          (c.slug != null && event.category.slug != null && c.slug == event.category.slug) ||
+          (c.name != null && event.category.name != null && c.name?.toLowerCase() == event.category.name?.toLowerCase()));
+
+      if (!alreadyExists) {
+        final updated = List<ProductCategoryRef>.from(existing)..add(event.category);
+        emit(currentState.copyWith(categories: updated));
+      }
+    } else if (state is ProductsEmpty) {
+      final currentState = state as ProductsEmpty;
+      final existing = currentState.categories;
+      final alreadyExists = existing.any((c) =>
+          (c.id != null && event.category.id != null && c.id == event.category.id) ||
+          (c.slug != null && event.category.slug != null && c.slug == event.category.slug) ||
+          (c.name != null && event.category.name != null && c.name?.toLowerCase() == event.category.name?.toLowerCase()));
+
+      if (!alreadyExists) {
+        final updated = List<ProductCategoryRef>.from(existing)..add(event.category);
+        emit(ProductsEmpty(
+          categories: updated,
+          selectedCategory: currentState.selectedCategory,
+          searchQuery: currentState.searchQuery,
+        ));
+      }
+    }
+  }
+
+  void _onCategoryUpdated(
+    ProductsCategoryUpdated event,
+    Emitter<ProductsState> emit,
+  ) {
+    if (state is ProductsSuccess) {
+      final currentState = state as ProductsSuccess;
+      final updatedCategories = currentState.categories.map((c) {
+        if ((c.id != null && event.category.id != null && c.id == event.category.id) ||
+            (c.slug != null && event.category.slug != null && c.slug == event.category.slug)) {
+          return event.category;
+        }
+        return c;
+      }).toList();
+
+      emit(currentState.copyWith(categories: updatedCategories));
+    } else if (state is ProductsEmpty) {
+      final currentState = state as ProductsEmpty;
+      final updatedCategories = currentState.categories.map((c) {
+        if ((c.id != null && event.category.id != null && c.id == event.category.id) ||
+            (c.slug != null && event.category.slug != null && c.slug == event.category.slug)) {
+          return event.category;
+        }
+        return c;
+      }).toList();
+
+      emit(ProductsEmpty(
+        categories: updatedCategories,
+        selectedCategory: currentState.selectedCategory,
+        searchQuery: currentState.searchQuery,
+      ));
+    }
+  }
+
+  void _onCategoryDeleted(
+    ProductsCategoryDeleted event,
+    Emitter<ProductsState> emit,
+  ) {
+    if (state is ProductsSuccess) {
+      final currentState = state as ProductsSuccess;
+      final deletedCat = currentState.categories.firstWhere(
+        (c) => c.id == event.categoryId,
+        orElse: () => ProductCategoryRef(id: event.categoryId),
+      );
+      final updatedCategories = currentState.categories
+          .where((c) => c.id != event.categoryId)
+          .toList();
+
+      var newSelectedCat = currentState.selectedCategory;
+      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name) {
+        newSelectedCat = 'all';
+      }
+
+      emit(currentState.copyWith(
+        categories: updatedCategories,
+        selectedCategory: newSelectedCat,
+      ));
+    } else if (state is ProductsEmpty) {
+      final currentState = state as ProductsEmpty;
+      final deletedCat = currentState.categories.firstWhere(
+        (c) => c.id == event.categoryId,
+        orElse: () => ProductCategoryRef(id: event.categoryId),
+      );
+      final updatedCategories = currentState.categories
+          .where((c) => c.id != event.categoryId)
+          .toList();
+
+      var newSelectedCat = currentState.selectedCategory;
+      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name) {
+        newSelectedCat = 'all';
+      }
+
+      emit(ProductsEmpty(
+        categories: updatedCategories,
+        selectedCategory: newSelectedCat,
+        searchQuery: currentState.searchQuery,
+      ));
+    }
+  }
+
+  Future<void> _onCategoriesRefreshRequested(
+    ProductsCategoriesRefreshRequested event,
+    Emitter<ProductsState> emit,
+  ) async {
+    try {
+      final freshCategories = await repository.getCategories(forceRefresh: true);
+      if (state is ProductsSuccess) {
+        final currentState = state as ProductsSuccess;
+        emit(currentState.copyWith(categories: freshCategories));
+      } else if (state is ProductsEmpty) {
+        final currentState = state as ProductsEmpty;
+        emit(ProductsEmpty(
+          categories: freshCategories,
+          selectedCategory: currentState.selectedCategory,
+          searchQuery: currentState.searchQuery,
+        ));
+      }
+    } catch (_) {
+      // Non-fatal; preserve existing categories
     }
   }
 

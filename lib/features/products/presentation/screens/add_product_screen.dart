@@ -8,6 +8,7 @@ import '../../bloc/gallery_upload_cubit.dart';
 import '../../data/models/post_create_model.dart';
 import '../../data/repositories/products_repository.dart';
 import '../widgets/product_gallery_picker.dart';
+import '../widgets/create_category_dialog.dart';
 
 /// Samsung One UI-inspired Add Product screen for WooCommerce Admin.
 /// Supports product name, type, status, regular & sale prices, stock management,
@@ -106,7 +107,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     super.dispose();
   }
 
-  void _submitProduct({String? statusOverride}) {
+  Future<void> _submitProduct({String? statusOverride}) async {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -127,6 +128,69 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       );
       return;
+    }
+
+    // Warn if local images have not been linked to an Image URL or Media Library item
+    if (_galleryCubit.state.hasUnlinkedItems) {
+      final unlinkedCount = _galleryCubit.state.unlinkedCount;
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogCtx) {
+          final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.warning,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Unlinked Images Detected',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              '$unlinkedCount image(s) from your device do not have an Image URL or Store Media link.\n\n'
+              'WooCommerce requires an Image URL or Media Library selection to attach and display product images in the Customer app. '
+              'If you save now without linking, these unlinked images will not appear on the storefront.',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx, false),
+                child: const Text('Cancel & Link Images'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogCtx, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.warning,
+                ),
+                child: const Text('Save Without Images'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (proceed != true || !mounted) {
+        return;
+      }
     }
 
     final regularPrice = _regularPriceController.text.trim();
@@ -1161,6 +1225,32 @@ class _AddProductScreenState extends State<AddProductScreen> {
             ),
             const SizedBox(height: 14),
           ],
+          // Create Category via WooCommerce API
+          OutlinedButton.icon(
+            onPressed: () async {
+              final created = await CreateCategoryDialog.show(context);
+              if (created != null && mounted) {
+                setState(() {
+                  _selectedCategories.add(created);
+                });
+                context.read<CreateProductBloc>().add(const CreateProductTaxonomiesRequested());
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Category '${created.name}' created and selected!"),
+                    backgroundColor: AppColors.success,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.create_new_folder_outlined, size: 16),
+            label: const Text('Create New Category in WooCommerce'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 12),
           // Add custom category
           Row(
             children: [
