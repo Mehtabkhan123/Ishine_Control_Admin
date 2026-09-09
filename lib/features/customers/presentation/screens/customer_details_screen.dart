@@ -9,6 +9,8 @@ import '../../bloc/single_customer_state.dart';
 import '../../data/models/get_customers_model.dart';
 import '../../data/models/get_single_customers_model.dart';
 import '../../data/repositories/customers_repository.dart';
+import 'edit_customer_screen.dart';
+import '../widgets/delete_customer_dialog.dart';
 
 /// Premium Samsung One UI 9-inspired Customer Details Screen.
 /// Powered by WooCommerce GET /wp-json/wc/v3/customers/{{customerId}}
@@ -209,6 +211,8 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
                     _buildMetadataCard(context, customer, isDark),
                   ],
 
+                  const SizedBox(height: 24),
+                  _buildDangerZoneCard(context, customer, isDark),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -279,6 +283,40 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
         ],
       ),
       actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_rounded),
+          tooltip: 'Edit Customer',
+          onPressed: () async {
+            final customer = _resolveCustomer(
+              context.read<SingleCustomerCubit>().state,
+            );
+            if (customer != null) {
+              final result =
+                  await EditCustomerScreen.show(context, customer: customer);
+              if (result == true && context.mounted) {
+                final singleCubit = context.read<SingleCustomerCubit>();
+                if (singleCubit.state.customer == null &&
+                    !singleCubit.state.cachedCustomers
+                        .containsKey(widget.customerId)) {
+                  Navigator.of(context).maybePop(true);
+                }
+              }
+            }
+          },
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.delete_outline_rounded,
+            color: AppColors.error,
+          ),
+          tooltip: 'Delete Customer',
+          onPressed: () {
+            final customer = _resolveCustomer(
+              context.read<SingleCustomerCubit>().state,
+            );
+            _handleDeleteCustomer(customer);
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.refresh_rounded),
           tooltip: 'Reload Customer Data',
@@ -605,12 +643,71 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
             ],
           );
 
+          final editButton = OutlinedButton.icon(
+            onPressed: () async {
+              final result =
+                  await EditCustomerScreen.show(context, customer: customer);
+              if (result == true && context.mounted) {
+                final singleCubit = context.read<SingleCustomerCubit>();
+                if (singleCubit.state.customer == null &&
+                    !singleCubit.state.cachedCustomers
+                        .containsKey(widget.customerId)) {
+                  Navigator.of(context).maybePop(true);
+                }
+              }
+            },
+            icon: const Icon(Icons.edit_rounded, size: 16),
+            label: const Text(
+              'Edit Profile',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(
+                color: AppColors.primary.withValues(alpha: 0.4),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
+          final deleteButton = OutlinedButton.icon(
+            onPressed: () => _handleDeleteCustomer(customer),
+            icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            label: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              side: BorderSide(
+                color: AppColors.error.withValues(alpha: 0.4),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+
           if (isCompact) {
             return Column(
               children: [
                 Center(child: avatarWidget),
                 const SizedBox(height: 16),
                 detailsWidget,
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    editButton,
+                    deleteButton,
+                  ],
+                ),
               ],
             );
           }
@@ -621,6 +718,16 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
               avatarWidget,
               const SizedBox(width: 20),
               Expanded(child: detailsWidget),
+              const SizedBox(width: 16),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  editButton,
+                  const SizedBox(height: 8),
+                  deleteButton,
+                ],
+              ),
             ],
           );
         },
@@ -1376,6 +1483,110 @@ class _CustomerDetailsScreenState extends State<CustomerDetailsScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).maybePop(),
             child: const Text('Go Back'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteCustomer(dynamic customer) async {
+    String? displayName;
+    String? email;
+    if (customer is GETSingleCustomersModel) {
+      displayName = customer.displayName;
+      email = customer.email;
+    } else if (customer is GETCustomersModel) {
+      displayName = customer.displayName;
+      email = customer.email;
+    }
+
+    final deleted = await DeleteCustomerDialog.show(
+      context,
+      customerId: widget.customerId,
+      customerName: displayName,
+      customerEmail: email,
+    );
+
+    if (deleted == true && mounted) {
+      Navigator.of(context).maybePop(true);
+    }
+  }
+
+  Widget _buildDangerZoneCard(
+    BuildContext context,
+    GETSingleCustomersModel customer,
+    bool isDark,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.error.withValues(alpha: 0.08)
+            : const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(22), // One UI Squircle
+        border: Border.all(
+          color: AppColors.error.withValues(alpha: isDark ? 0.35 : 0.25),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.error,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Danger Zone',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.lightTextPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Permanently delete customer #${widget.customerId} (${customer.displayName}) from your WooCommerce store using force=true. All billing, shipping, and account details will be permanently removed. This action cannot be undone.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _handleDeleteCustomer(customer),
+            icon: const Icon(Icons.delete_forever_rounded, size: 18),
+            label: const Text(
+              'Delete Customer',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ],
       ),

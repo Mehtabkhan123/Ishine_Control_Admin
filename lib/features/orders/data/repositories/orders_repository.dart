@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../system_status/data/services/system_status_service.dart';
 import '../models/get_single_order_model.dart' show GetSingleOrderModel;
+import '../models/put_update_order_model.dart' show PutUpdateOrderModel;
+import '../models/delete_order_model.dart' show DeleteOrderModel;
 import '../services/orders_service.dart';
 
 /// Repository responsible for orders data fetching, pagination, and caching.
@@ -58,6 +60,50 @@ class OrdersRepository {
   }) async {
     return _service.fetchSingleOrder(
       orderId,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Updates an order by ID in WooCommerce:
+  /// `PUT /wp-json/wc/v3/orders/{{orderId}}`
+  Future<PutUpdateOrderModel> updateOrder(
+    int orderId,
+    Map<String, dynamic> updateData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.updateOrder(
+      orderId,
+      updateData,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Deletes an order by ID from WooCommerce:
+  /// `DELETE /wp-json/wc/v3/orders/{{orderId}}?force=true`
+  Future<DeleteOrderModel> deleteOrder(
+    int orderId, {
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.deleteOrder(
+      orderId,
+      force: force,
       baseUrl: baseUrl,
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,

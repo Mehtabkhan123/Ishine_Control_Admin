@@ -289,5 +289,110 @@ void main() {
         ),
       ],
     );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'prepends newly created coupon to local list and increments totalCoupons',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: [sampleCoupons.first],
+        totalCoupons: 1,
+      ),
+      act: (bloc) => bloc.add(CouponsCouponCreated(sampleCoupons[1])),
+      expect: () => [
+        CouponsState(
+          status: CouponsStatus.success,
+          coupons: [sampleCoupons[1], sampleCoupons.first],
+          totalCoupons: 2,
+        ),
+      ],
+    );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'ignores duplicate coupon when CouponsCouponCreated is called for already present coupon',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: [sampleCoupons.first],
+        totalCoupons: 1,
+      ),
+      act: (bloc) => bloc.add(CouponsCouponCreated(sampleCoupons.first)),
+      expect: () => [], // No state emitted since it was a duplicate
+    );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'updates existing coupon in local list on CouponsCouponUpdated',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: sampleCoupons,
+        totalCoupons: 2,
+      ),
+      act: (bloc) {
+        final updated = GETCouponReportModel(
+          id: 1,
+          code: 'WELCOME10_UPDATED',
+          amount: '15.00',
+          discountType: 'percent',
+          status: 'publish',
+        );
+        bloc.add(CouponsCouponUpdated(updated));
+      },
+      expect: () => [
+        isA<CouponsState>()
+            .having((s) => s.coupons.first.code, 'code', 'WELCOME10_UPDATED')
+            .having((s) => s.coupons.first.amount, 'amount', '15.00')
+            .having((s) => s.coupons.length, 'length', 2),
+      ],
+    );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'does nothing when CouponsCouponUpdated is called for non-existent coupon ID',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: sampleCoupons,
+        totalCoupons: 2,
+      ),
+      act: (bloc) {
+        final unknown = GETCouponReportModel(
+          id: 9999,
+          code: 'UNKNOWN',
+          amount: '10.00',
+        );
+        bloc.add(CouponsCouponUpdated(unknown));
+      },
+      expect: () => [],
+    );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'removes coupon from local list and decrements totalCoupons on CouponsCouponDeleted',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: sampleCoupons,
+        totalCoupons: 2,
+      ),
+      act: (bloc) => bloc.add(const CouponsCouponDeleted(1)),
+      expect: () => [
+        CouponsState(
+          status: CouponsStatus.success,
+          coupons: [sampleCoupons[1]],
+          totalCoupons: 1,
+        ),
+      ],
+    );
+
+    blocTest<CouponsBloc, CouponsState>(
+      'does nothing when CouponsCouponDeleted is called for non-existent coupon ID',
+      build: () => CouponsBloc(repository: mockRepository),
+      seed: () => CouponsState(
+        status: CouponsStatus.success,
+        coupons: sampleCoupons,
+        totalCoupons: 2,
+      ),
+      act: (bloc) => bloc.add(const CouponsCouponDeleted(9999)),
+      expect: () => [],
+    );
   });
 }

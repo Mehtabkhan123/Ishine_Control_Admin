@@ -115,6 +115,20 @@ class SingleOrderCubit extends Cubit<SingleOrderState> {
     ));
   }
 
+  /// Removes deleted order from cache and resets if it is currently active.
+  void orderDeleted(int orderId) {
+    final updatedCache = Map<int, GetSingleOrderModel>.from(state.cachedOrders)
+      ..remove(orderId);
+    final isActive = state.activeOrderId == orderId;
+
+    emit(state.copyWith(
+      cachedOrders: updatedCache,
+      clearOrder: isActive,
+      clearActiveOrderId: isActive,
+      status: isActive ? SingleOrderStatus.initial : state.status,
+    ));
+  }
+
   String _extractErrorMessage(dynamic e) {
     if (e is WooCommerceException) {
       return e.message;

@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/models/get_coupon_report_model.dart';
+import '../widgets/delete_coupon_dialog.dart';
+import 'edit_coupon_screen.dart';
 
 /// Premium Samsung One UI 9-inspired Coupon Details Screen.
 /// Displays detailed promotion terms, spend restrictions, usage limits,
 /// product rules, and WooCommerce metadata for an individual coupon.
-class CouponDetailsScreen extends StatelessWidget {
+class CouponDetailsScreen extends StatefulWidget {
   final GETCouponReportModel coupon;
 
   const CouponDetailsScreen({
@@ -15,17 +17,59 @@ class CouponDetailsScreen extends StatelessWidget {
     required this.coupon,
   });
 
-  static Route<void> route({required GETCouponReportModel coupon}) {
-    return MaterialPageRoute(
+  static Route<GETCouponReportModel?> route({
+    required GETCouponReportModel coupon,
+  }) {
+    return MaterialPageRoute<GETCouponReportModel?>(
       builder: (_) => CouponDetailsScreen(coupon: coupon),
     );
   }
 
-  static Future<void> show(
+  static Future<GETCouponReportModel?> show(
     BuildContext context, {
     required GETCouponReportModel coupon,
   }) async {
-    await Navigator.of(context).push(route(coupon: coupon));
+    return await Navigator.of(context)
+        .push<GETCouponReportModel?>(route(coupon: coupon));
+  }
+
+  @override
+  State<CouponDetailsScreen> createState() => _CouponDetailsScreenState();
+}
+
+class _CouponDetailsScreenState extends State<CouponDetailsScreen> {
+  late GETCouponReportModel _coupon;
+
+  GETCouponReportModel get coupon => _coupon;
+
+  @override
+  void initState() {
+    super.initState();
+    _coupon = widget.coupon;
+  }
+
+  Future<void> _openEditScreen() async {
+    final updated = await EditCouponScreen.show(context, coupon: _coupon);
+    if (updated != null && mounted) {
+      setState(() {
+        _coupon = updated;
+      });
+    }
+  }
+
+  Future<void> _confirmDeleteCoupon() async {
+    if (_coupon.id == null) return;
+    final deleted = await DeleteCouponDialog.show(
+      context,
+      couponId: _coupon.id!,
+      couponCode: _coupon.code,
+      discountDescription:
+          '${_coupon.formattedDiscount} • ${_coupon.discountTypeDisplayName}',
+    );
+
+    if (deleted == true && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -97,8 +141,24 @@ class CouponDetailsScreen extends StatelessWidget {
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         tooltip: 'Back to Coupons',
-        onPressed: () => Navigator.of(context).maybePop(),
+        onPressed: () => Navigator.of(context).maybePop(_coupon),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_rounded),
+          tooltip: 'Edit Coupon',
+          onPressed: _openEditScreen,
+        ),
+        IconButton(
+          icon: const Icon(
+            Icons.delete_outline_rounded,
+            color: AppColors.error,
+          ),
+          tooltip: 'Delete Coupon',
+          onPressed: _confirmDeleteCoupon,
+        ),
+        const SizedBox(width: 8),
+      ],
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -275,6 +335,36 @@ class CouponDetailsScreen extends StatelessWidget {
                   _buildStatusBadge(coupon.statusDisplayName, isExpired, isDark),
                   if (coupon.freeShipping == true)
                     _buildFreeShippingBadge(isDark),
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: _openEditScreen,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.edit_rounded,
+                              size: 12, color: AppColors.primary),
+                          SizedBox(width: 4),
+                          Text(
+                            'EDIT',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

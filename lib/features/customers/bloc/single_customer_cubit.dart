@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/network/network_exceptions.dart';
 import '../data/models/get_customers_model.dart';
 import '../data/models/get_single_customers_model.dart';
+import '../data/models/put_update_customer_model.dart';
 import '../data/repositories/customers_repository.dart';
 import 'single_customer_state.dart';
 
@@ -118,6 +119,40 @@ class SingleCustomerCubit extends Cubit<SingleCustomerState> {
     if (index != state.activeSectionIndex) {
       emit(state.copyWith(activeSectionIndex: index));
     }
+  }
+
+  /// Updates the local cached and active customer representation with latest [PutUpdateCustomerModel]
+  void customerUpdated(PutUpdateCustomerModel updatedCustomer) {
+    final id = updatedCustomer.id;
+    if (id == null) return;
+
+    try {
+      final newSingle =
+          GETSingleCustomersModel.fromJson(updatedCustomer.toJson());
+      final updatedCache =
+          Map<int, GETSingleCustomersModel>.from(state.cachedCustomers)
+            ..[id] = newSingle;
+
+      emit(state.copyWith(
+        customer: id == state.activeCustomerId ? newSingle : state.customer,
+        cachedCustomers: updatedCache,
+        clearError: true,
+      ));
+    } catch (_) {}
+  }
+
+  /// Clears customer from active state and cache when permanently deleted
+  void customerDeleted(int customerId) {
+    final updatedCache =
+        Map<int, GETSingleCustomersModel>.from(state.cachedCustomers)
+          ..remove(customerId);
+
+    emit(state.copyWith(
+      customer: state.activeCustomerId == customerId ? null : state.customer,
+      clearCustomer: state.activeCustomerId == customerId,
+      cachedCustomers: updatedCache,
+      clearError: true,
+    ));
   }
 
   String _extractErrorMessage(dynamic e) {

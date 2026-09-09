@@ -5,6 +5,8 @@ import 'package:ishine_admin_app/features/customers/bloc/single_customer_cubit.d
 import 'package:ishine_admin_app/features/customers/bloc/single_customer_state.dart';
 import 'package:ishine_admin_app/features/customers/data/models/get_customers_model.dart';
 import 'package:ishine_admin_app/features/customers/data/models/get_single_customers_model.dart';
+import 'package:ishine_admin_app/features/customers/data/models/put_update_customer_model.dart'
+    show PutUpdateCustomerModel;
 import 'package:ishine_admin_app/features/customers/data/repositories/customers_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -181,6 +183,29 @@ void main() {
       final cubit = SingleCustomerCubit(repository: mockRepository);
       cubit.setActiveSection(2);
       expect(cubit.state.activeSectionIndex, 2);
+    });
+
+    test('customerUpdated updates active customer and cached entry', () {
+      final cubit = SingleCustomerCubit(repository: mockRepository);
+      cubit.setInitialCustomer(
+        GETCustomersModel(id: 77, firstName: 'Bruce', lastName: 'Banner'),
+      );
+
+      expect(cubit.state.customer?.displayName, 'Bruce Banner');
+
+      cubit.customerUpdated(
+        PutUpdateCustomerModel(
+          id: 77,
+          firstName: 'The Incredible',
+          lastName: 'Hulk',
+          email: 'hulk@avengers.com',
+        ),
+      );
+
+      expect(cubit.state.customer?.firstName, 'The Incredible');
+      expect(cubit.state.customer?.lastName, 'Hulk');
+      expect(cubit.state.customer?.email, 'hulk@avengers.com');
+      expect(cubit.state.cachedCustomers[77]?.firstName, 'The Incredible');
     });
   });
 }

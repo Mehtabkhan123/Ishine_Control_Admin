@@ -14,6 +14,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     on<OrdersFilterChanged>(_onFilterChanged);
     on<OrdersSearchChanged>(_onSearchChanged);
     on<OrdersRefreshed>(_onRefreshed);
+    on<OrdersOrderDeleted>(_onOrderDeleted);
   }
 
   Future<void> _onFetchStarted(
@@ -250,6 +251,23 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     Emitter<OrdersState> emit,
   ) async {
     add(const OrdersFetchStarted(isRefresh: true));
+  }
+
+  void _onOrderDeleted(
+    OrdersOrderDeleted event,
+    Emitter<OrdersState> emit,
+  ) {
+    final updatedList =
+        state.orders.where((o) => o.id != event.orderId).toList();
+    final updatedTotal = state.totalOrders > 0 ? state.totalOrders - 1 : 0;
+
+    emit(state.copyWith(
+      orders: updatedList,
+      totalOrders: updatedTotal,
+      status: updatedList.isEmpty && state.status == OrdersStatus.success
+          ? OrdersStatus.empty
+          : state.status,
+    ));
   }
 
   String _extractErrorMessage(dynamic e) {

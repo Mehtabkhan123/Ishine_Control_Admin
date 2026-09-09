@@ -2,6 +2,9 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../system_status/data/services/system_status_service.dart';
 import '../models/get_coupon_report_model.dart';
+import '../models/post_create_coupon_model.dart';
+import '../models/put_update_coupon_model.dart';
+import '../models/delete_coupon_model.dart';
 import '../services/coupons_service.dart';
 
 /// Repository responsible for coupons data fetching, pagination, and caching.
@@ -56,6 +59,70 @@ class CouponsRepository {
   }) async {
     return _service.fetchSingleCoupon(
       couponId,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Creates a new coupon in WooCommerce API:
+  /// `POST /wp-json/wc/v3/coupons`
+  Future<PostCreateCouponModel> createCoupon(
+    Map<String, dynamic> couponData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.createCoupon(
+      couponData,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Updates an existing coupon in WooCommerce API:
+  /// `PUT /wp-json/wc/v3/coupons/{{couponId}}`
+  Future<PutUpdateCouponModel> updateCoupon(
+    int couponId,
+    Map<String, dynamic> couponData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.updateCoupon(
+      couponId,
+      couponData,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Permanently deletes a coupon in WooCommerce API:
+  /// `DELETE /wp-json/wc/v3/coupons/{{couponId}}?force=true`
+  Future<DeleteCouponModel> deleteCoupon(
+    int couponId, {
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.deleteCoupon(
+      couponId,
+      force: force,
       baseUrl: baseUrl,
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,

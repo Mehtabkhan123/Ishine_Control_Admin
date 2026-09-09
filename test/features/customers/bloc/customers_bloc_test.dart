@@ -5,6 +5,8 @@ import 'package:ishine_admin_app/features/customers/bloc/customers_bloc.dart';
 import 'package:ishine_admin_app/features/customers/bloc/customers_event.dart';
 import 'package:ishine_admin_app/features/customers/bloc/customers_state.dart';
 import 'package:ishine_admin_app/features/customers/data/models/get_customers_model.dart';
+import 'package:ishine_admin_app/features/customers/data/models/put_update_customer_model.dart'
+    show PutUpdateCustomerModel;
 import 'package:ishine_admin_app/features/customers/data/repositories/customers_repository.dart';
 import 'package:ishine_admin_app/features/customers/data/services/customers_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -275,6 +277,30 @@ void main() {
           totalPages: 1,
         ),
       ],
+    );
+
+    blocTest<CustomersBloc, CustomersState>(
+      'updates specific customer in loaded list when CustomersCustomerUpdated is dispatched',
+      build: () => CustomersBloc(repository: mockRepository),
+      seed: () => CustomersState(
+        status: CustomersStatus.success,
+        customers: sampleCustomers,
+      ),
+      act: (bloc) => bloc.add(
+        CustomersCustomerUpdated(
+          PutUpdateCustomerModel(
+            id: 1,
+            firstName: 'Alice (Updated)',
+            lastName: 'Smith',
+            email: 'alice.updated@example.com',
+          ),
+        ),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.customers.first.firstName, 'Alice (Updated)');
+        expect(bloc.state.customers.first.email, 'alice.updated@example.com');
+        expect(bloc.state.customers.last.firstName, 'Bob');
+      },
     );
   });
 }

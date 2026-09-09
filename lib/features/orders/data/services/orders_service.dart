@@ -6,6 +6,8 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../system_status/data/services/system_status_service.dart';
 import '../models/get_orders_model.dart';
 import '../models/get_single_order_model.dart' show GetSingleOrderModel;
+import '../models/put_update_order_model.dart' show PutUpdateOrderModel;
+import '../models/delete_order_model.dart' show DeleteOrderModel;
 
 /// Response wrapper containing parsed orders list and pagination headers metadata.
 class OrdersResponse {
@@ -289,6 +291,246 @@ class OrdersService {
     } catch (e, stackTrace) {
       throw WooCommerceParseException(
         message: 'Failed to parse order #$orderId response: ${e.toString()}',
+        statusCode: statusCode,
+        originalData: response.data,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Updates an existing order in WooCommerce:
+  /// `PUT /wp-json/wc/v3/orders/{{orderId}}`
+  ///
+  /// Sends only valid writable WooCommerce fields in the PUT request.
+  Future<PutUpdateOrderModel> updateOrder(
+    int orderId,
+    Map<String, dynamic> updateData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final effectiveBaseUrl = _sanitizeBaseUrl(baseUrl ?? EnvConfig.baseUrl);
+    final effectiveKey = (consumerKey ?? EnvConfig.consumerKey).trim();
+    final effectiveSecret = (consumerSecret ?? EnvConfig.consumerSecret).trim();
+
+    if (effectiveBaseUrl.isEmpty) {
+      throw const WooCommerceException(
+        message: 'Base URL is empty. Please configure WOOCOMMERCE_BASE_URL.',
+      );
+    }
+
+    if (effectiveKey.isEmpty || effectiveSecret.isEmpty) {
+      throw const WooCommerceException(
+        message:
+            'WooCommerce Consumer Key or Consumer Secret is missing. Please configure credentials.',
+      );
+    }
+
+    final isHttps = effectiveBaseUrl.toLowerCase().startsWith('https://');
+    final resolvedAuthMode = (authMode == WooCommerceAuthMode.auto)
+        ? (kIsWeb
+            ? WooCommerceAuthMode.queryParameters
+            : (isHttps
+                ? WooCommerceAuthMode.header
+                : WooCommerceAuthMode.queryParameters))
+        : authMode;
+
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    final queryParams = <String, dynamic>{};
+
+    if (resolvedAuthMode == WooCommerceAuthMode.header && !kIsWeb) {
+      final credentials = '$effectiveKey:$effectiveSecret';
+      final encodedAuth = base64Encode(utf8.encode(credentials));
+      headers['Authorization'] = 'Basic $encodedAuth';
+    } else {
+      queryParams['consumer_key'] = effectiveKey;
+      queryParams['consumer_secret'] = effectiveSecret;
+    }
+
+    final requestUri = '$effectiveBaseUrl${ApiEndpoints.order(orderId)}';
+
+    Response response;
+    try {
+      response = await _dio.put(
+        requestUri,
+        data: updateData,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.json,
+          validateStatus: (status) => true,
+          sendTimeout: kIsWeb ? null : const Duration(seconds: 25),
+          receiveTimeout: const Duration(seconds: 25),
+        ),
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw WooCommerceException.fromDioException(e);
+    } catch (e) {
+      throw WooCommerceException(
+        message:
+            'Network connection failed while updating order #$orderId: ${e.toString()}',
+      );
+    }
+
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode < 200 || statusCode >= 300) {
+      final errorData = response.data;
+      String errorMessage = 'Server responded with HTTP $statusCode';
+      if (statusCode == 404) {
+        errorMessage = 'Order #$orderId was not found on your WooCommerce store.';
+      } else if (errorData is Map<String, dynamic> &&
+          errorData['message'] != null) {
+        errorMessage = errorData['message'].toString();
+      }
+      throw WooCommerceException(
+        message: errorMessage,
+        statusCode: statusCode,
+        errorData: errorData,
+      );
+    }
+
+    try {
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        rawData = jsonDecode(rawData);
+      }
+
+      if (rawData is Map<String, dynamic>) {
+        return PutUpdateOrderModel.fromJson(rawData);
+      } else {
+        throw const FormatException(
+            'Expected JSON object response for updated order');
+      }
+    } catch (e, stackTrace) {
+      throw WooCommerceParseException(
+        message: 'Failed to parse order #$orderId update response: ${e.toString()}',
+        statusCode: statusCode,
+        originalData: response.data,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Deletes an order permanently from WooCommerce:
+  /// `DELETE /wp-json/wc/v3/orders/{{orderId}}?force=true`
+  Future<DeleteOrderModel> deleteOrder(
+    int orderId, {
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final effectiveBaseUrl = _sanitizeBaseUrl(baseUrl ?? EnvConfig.baseUrl);
+    final effectiveKey = (consumerKey ?? EnvConfig.consumerKey).trim();
+    final effectiveSecret = (consumerSecret ?? EnvConfig.consumerSecret).trim();
+
+    if (effectiveBaseUrl.isEmpty) {
+      throw const WooCommerceException(
+        message: 'Base URL is empty. Please configure WOOCOMMERCE_BASE_URL.',
+      );
+    }
+
+    if (effectiveKey.isEmpty || effectiveSecret.isEmpty) {
+      throw const WooCommerceException(
+        message:
+            'WooCommerce Consumer Key or Consumer Secret is missing. Please configure credentials.',
+      );
+    }
+
+    final isHttps = effectiveBaseUrl.toLowerCase().startsWith('https://');
+    final resolvedAuthMode = (authMode == WooCommerceAuthMode.auto)
+        ? (kIsWeb
+            ? WooCommerceAuthMode.queryParameters
+            : (isHttps
+                ? WooCommerceAuthMode.header
+                : WooCommerceAuthMode.queryParameters))
+        : authMode;
+
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      if (!kIsWeb) 'Content-Type': 'application/json',
+    };
+
+    final queryParams = <String, dynamic>{
+      'force': force.toString(),
+    };
+
+    if (resolvedAuthMode == WooCommerceAuthMode.header && !kIsWeb) {
+      final credentials = '$effectiveKey:$effectiveSecret';
+      final encodedAuth = base64Encode(utf8.encode(credentials));
+      headers['Authorization'] = 'Basic $encodedAuth';
+    } else {
+      queryParams['consumer_key'] = effectiveKey;
+      queryParams['consumer_secret'] = effectiveSecret;
+    }
+
+    final requestUri = '$effectiveBaseUrl${ApiEndpoints.order(orderId)}';
+
+    Response response;
+    try {
+      response = await _dio.delete(
+        requestUri,
+        queryParameters: queryParams,
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.json,
+          validateStatus: (status) => true,
+          sendTimeout: kIsWeb ? null : const Duration(seconds: 25),
+          receiveTimeout: const Duration(seconds: 25),
+        ),
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw WooCommerceException.fromDioException(e);
+    } catch (e) {
+      throw WooCommerceException(
+        message:
+            'Network connection failed while deleting order #$orderId: ${e.toString()}',
+      );
+    }
+
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode < 200 || statusCode >= 300) {
+      final errorData = response.data;
+      String errorMessage = 'Server responded with HTTP $statusCode';
+      if (statusCode == 404) {
+        // Handle cases where the order does not exist or has already been deleted
+        errorMessage = 'Order #$orderId does not exist or has already been deleted.';
+      } else if (errorData is Map<String, dynamic> &&
+          errorData['message'] != null) {
+        errorMessage = errorData['message'].toString();
+      }
+      throw WooCommerceException(
+        message: errorMessage,
+        statusCode: statusCode,
+        errorData: errorData,
+      );
+    }
+
+    try {
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        rawData = jsonDecode(rawData);
+      }
+
+      if (rawData is Map<String, dynamic>) {
+        return DeleteOrderModel.fromJson(rawData);
+      } else {
+        throw const FormatException(
+            'Expected JSON object response for deleted order');
+      }
+    } catch (e, stackTrace) {
+      throw WooCommerceParseException(
+        message: 'Failed to parse order #$orderId delete response: ${e.toString()}',
         statusCode: statusCode,
         originalData: response.data,
         stackTrace: stackTrace,

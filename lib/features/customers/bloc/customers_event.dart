@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../data/models/put_update_customer_model.dart';
 
 abstract class CustomersEvent extends Equatable {
   const CustomersEvent();
@@ -45,4 +46,24 @@ class CustomersSearchChanged extends CustomersEvent {
 /// Dispatched during pull-to-refresh to reset pagination and reload latest customers
 class CustomersRefreshed extends CustomersEvent {
   const CustomersRefreshed();
+}
+
+/// Dispatched when a customer is updated in WooCommerce
+class CustomersCustomerUpdated extends CustomersEvent {
+  final PutUpdateCustomerModel updatedCustomer;
+
+  const CustomersCustomerUpdated(this.updatedCustomer);
+
+  @override
+  List<Object?> get props => [updatedCustomer];
+}
+
+/// Dispatched when a customer is deleted in WooCommerce
+class CustomersCustomerDeleted extends CustomersEvent {
+  final int customerId;
+
+  const CustomersCustomerDeleted(this.customerId);
+
+  @override
+  List<Object?> get props => [customerId];
 }

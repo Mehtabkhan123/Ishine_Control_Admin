@@ -46,3 +46,13 @@ class OrdersSearchChanged extends OrdersEvent {
 class OrdersRefreshed extends OrdersEvent {
   const OrdersRefreshed();
 }
+
+/// Notification that an order was permanently deleted.
+class OrdersOrderDeleted extends OrdersEvent {
+  final int orderId;
+
+  const OrdersOrderDeleted(this.orderId);
+
+  @override
+  List<Object?> get props => [orderId];
+}

@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../data/models/get_coupon_report_model.dart';
+
 abstract class CouponsEvent extends Equatable {
   const CouponsEvent();
 
@@ -46,3 +48,35 @@ class CouponsTypeFilterChanged extends CouponsEvent {
 class CouponsRefreshed extends CouponsEvent {
   const CouponsRefreshed();
 }
+
+/// Dispatched when a new coupon is created in WooCommerce
+class CouponsCouponCreated extends CouponsEvent {
+  final GETCouponReportModel coupon;
+
+  const CouponsCouponCreated(this.coupon);
+
+  @override
+  List<Object?> get props => [coupon];
+}
+
+/// Dispatched when an existing coupon is updated in WooCommerce
+class CouponsCouponUpdated extends CouponsEvent {
+  final GETCouponReportModel coupon;
+
+  const CouponsCouponUpdated(this.coupon);
+
+  @override
+  List<Object?> get props => [coupon];
+}
+
+/// Dispatched when a coupon is permanently deleted in WooCommerce
+class CouponsCouponDeleted extends CouponsEvent {
+  final int couponId;
+
+  const CouponsCouponDeleted(this.couponId);
+
+  @override
+  List<Object?> get props => [couponId];
+}
+
+

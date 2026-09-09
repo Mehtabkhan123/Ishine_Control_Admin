@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../system_status/data/services/system_status_service.dart';
 import '../models/get_single_customers_model.dart';
+import '../models/put_update_customer_model.dart';
+import '../models/delete_customer_model.dart';
 import '../services/customers_service.dart';
 
 /// Repository responsible for customers data fetching, pagination, and caching.
@@ -60,6 +62,50 @@ class CustomersRepository {
   }) async {
     return _service.fetchSingleCustomer(
       customerId,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Updates a customer by ID in WooCommerce API:
+  /// `PUT /wp-json/wc/v3/customers/{{customerId}}`
+  Future<PutUpdateCustomerModel> updateCustomer(
+    int customerId,
+    Map<String, dynamic> updateData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.updateCustomer(
+      customerId,
+      updateData,
+      baseUrl: baseUrl,
+      consumerKey: consumerKey,
+      consumerSecret: consumerSecret,
+      authMode: authMode,
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Permanently deletes a customer by ID in WooCommerce API:
+  /// `DELETE /wp-json/wc/v3/customers/{{customerId}}?force=true`
+  Future<DeleteCustomerModel> deleteCustomer(
+    int customerId, {
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    return _service.deleteCustomer(
+      customerId,
+      force: force,
       baseUrl: baseUrl,
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,

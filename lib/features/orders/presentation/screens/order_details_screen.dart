@@ -8,6 +8,8 @@ import '../../bloc/single_order_cubit.dart';
 import '../../bloc/single_order_state.dart';
 import '../../data/models/get_single_order_model.dart';
 import '../../data/repositories/orders_repository.dart';
+import 'edit_order_screen.dart';
+import '../widgets/delete_order_dialog.dart';
 
 /// Premium Samsung One UI 9-inspired Order Details Screen.
 /// Powered by WooCommerce GET /wp-json/wc/v3/orders/{{orderId}}
@@ -331,6 +333,107 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                         ),
                       ),
                     ),
+
+                    // Edit Order Button
+                    if (order != null) ...[
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: () async {
+                          final updated = await EditOrderScreen.show(context, order: order);
+                          if (updated == true && context.mounted) {
+                            context.read<SingleOrderCubit>().fetchSingleOrder(
+                              widget.orderId,
+                              forceRefresh: true,
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: AppColors.brandGradient,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.edit_note_rounded,
+                                size: 17,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Edit Order',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Delete Order Button
+                      InkWell(
+                        onTap: () async {
+                          final deleted = await DeleteOrderDialog.show(
+                            context,
+                            orderId: widget.orderId,
+                            displayOrderNumber: displayTitle,
+                          );
+                          if (deleted == true && context.mounted) {
+                            Navigator.of(context).pop(true);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.delete_outline_rounded,
+                                size: 17,
+                                color: AppColors.error,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Delete',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

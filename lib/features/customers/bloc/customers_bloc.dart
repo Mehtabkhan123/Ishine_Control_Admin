@@ -14,6 +14,8 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
     on<CustomersRoleFilterChanged>(_onRoleFilterChanged);
     on<CustomersSearchChanged>(_onSearchChanged);
     on<CustomersRefreshed>(_onRefreshed);
+    on<CustomersCustomerUpdated>(_onCustomerUpdated);
+    on<CustomersCustomerDeleted>(_onCustomerDeleted);
   }
 
   Future<void> _onFetchStarted(
@@ -256,6 +258,38 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
     Emitter<CustomersState> emit,
   ) async {
     add(const CustomersFetchStarted(isRefresh: true));
+  }
+
+  void _onCustomerUpdated(
+    CustomersCustomerUpdated event,
+    Emitter<CustomersState> emit,
+  ) {
+    final updatedList = state.customers.map((c) {
+      if (c.id == event.updatedCustomer.id) {
+        return GETCustomersModel.fromJson(event.updatedCustomer.toJson());
+      }
+      return c;
+    }).toList();
+
+    emit(state.copyWith(customers: updatedList));
+  }
+
+  void _onCustomerDeleted(
+    CustomersCustomerDeleted event,
+    Emitter<CustomersState> emit,
+  ) {
+    final updatedList =
+        state.customers.where((c) => c.id != event.customerId).toList();
+    final updatedTotal =
+        state.totalCustomers > 0 ? state.totalCustomers - 1 : 0;
+
+    emit(state.copyWith(
+      customers: updatedList,
+      totalCustomers: updatedTotal,
+      status: updatedList.isEmpty && state.status == CustomersStatus.success
+          ? CustomersStatus.empty
+          : state.status,
+    ));
   }
 
   String _extractErrorMessage(dynamic e) {

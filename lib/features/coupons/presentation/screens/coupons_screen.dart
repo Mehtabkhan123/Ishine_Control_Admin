@@ -10,6 +10,9 @@ import '../../bloc/coupons_state.dart';
 import '../../data/models/get_coupon_report_model.dart';
 import '../../data/repositories/coupons_repository.dart';
 import 'coupon_details_screen.dart';
+import 'add_coupon_screen.dart';
+import 'edit_coupon_screen.dart';
+import '../widgets/delete_coupon_dialog.dart';
 
 /// Modern premium Coupons Screen with Samsung One UI 9 aesthetics.
 /// Powered by WooCommerce GET /wp-json/wc/v3/coupons?per_page=50&page=1 with
@@ -19,18 +22,23 @@ class CouponsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CouponsRepository repository;
     try {
-      repository = context.read<CouponsRepository>();
+      context.read<CouponsBloc>();
+      return const _CouponsView();
     } catch (_) {
-      repository = CouponsRepository();
-    }
+      CouponsRepository repository;
+      try {
+        repository = context.read<CouponsRepository>();
+      } catch (_) {
+        repository = CouponsRepository();
+      }
 
-    return BlocProvider<CouponsBloc>(
-      create: (_) => CouponsBloc(repository: repository)
-        ..add(const CouponsFetchStarted()),
-      child: const _CouponsView(),
-    );
+      return BlocProvider<CouponsBloc>(
+        create: (_) => CouponsBloc(repository: repository)
+          ..add(const CouponsFetchStarted()),
+        child: const _CouponsView(),
+      );
+    }
   }
 }
 
@@ -422,6 +430,26 @@ class _CouponsViewState extends State<_CouponsView> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () => AddCouponScreen.show(context),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text(
+                    'Add Coupon',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -820,7 +848,32 @@ class _CouponsViewState extends State<_CouponsView> {
                 ),
               ],
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 4),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                tooltip: 'Edit Coupon',
+                color:
+                    isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                onPressed: () {
+                  EditCouponScreen.show(context, coupon: coupon);
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                tooltip: 'Delete Coupon',
+                color: AppColors.error.withValues(alpha: 0.75),
+                onPressed: () {
+                  if (coupon.id != null) {
+                    DeleteCouponDialog.show(
+                      context,
+                      couponId: coupon.id!,
+                      couponCode: coupon.code,
+                      discountDescription:
+                          '${coupon.formattedDiscount} • ${coupon.discountTypeDisplayName}',
+                    );
+                  }
+                },
+              ),
               Icon(
                 Icons.chevron_right_rounded,
                 color:
@@ -983,6 +1036,16 @@ class _CouponsViewState extends State<_CouponsView> {
                 },
                 icon: const Icon(Icons.clear_all_rounded, size: 18),
                 label: const Text('Reset Filters'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => AddCouponScreen.show(context),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Create First Coupon'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                 ),

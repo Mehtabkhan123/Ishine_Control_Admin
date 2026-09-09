@@ -10,6 +10,8 @@ import '../../bloc/customers_state.dart';
 import '../../data/models/get_customers_model.dart';
 import '../../data/repositories/customers_repository.dart';
 import 'customer_details_screen.dart';
+import 'edit_customer_screen.dart';
+import '../widgets/delete_customer_dialog.dart';
 
 /// Redesigned Customers Screen with Samsung One UI 9 aesthetics.
 /// Powered by WooCommerce GET /wp-json/wc/v3/customers with pagination (per_page=20),
@@ -20,18 +22,23 @@ class CustomersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    CustomersRepository repository;
     try {
-      repository = context.read<CustomersRepository>();
+      context.read<CustomersBloc>();
+      return const _CustomersView();
     } catch (_) {
-      repository = CustomersRepository();
-    }
+      CustomersRepository repository;
+      try {
+        repository = context.read<CustomersRepository>();
+      } catch (_) {
+        repository = CustomersRepository();
+      }
 
-    return BlocProvider<CustomersBloc>(
-      create: (_) => CustomersBloc(repository: repository)
-        ..add(const CustomersFetchStarted()),
-      child: const _CustomersView(),
-    );
+      return BlocProvider<CustomersBloc>(
+        create: (_) => CustomersBloc(repository: repository)
+          ..add(const CustomersFetchStarted()),
+        child: const _CustomersView(),
+      );
+    }
   }
 }
 
@@ -822,7 +829,79 @@ class _CustomersViewState extends State<_CustomersView> {
                 ),
               ],
 
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: isDark
+                      ? AppColors.darkTextMuted
+                      : AppColors.lightTextMuted,
+                  size: 20,
+                ),
+                tooltip: 'Customer Options',
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                onSelected: (value) {
+                  if (value == 'view') {
+                    if (customer.id != null) {
+                      CustomerDetailsScreen.show(
+                        context,
+                        customerId: customer.id!,
+                        initialCustomer: customer,
+                      );
+                    }
+                  } else if (value == 'edit') {
+                    EditCustomerScreen.show(context, customer: customer);
+                  } else if (value == 'delete') {
+                    if (customer.id != null) {
+                      DeleteCustomerDialog.show(
+                        context,
+                        customerId: customer.id!,
+                        customerName: customer.displayName,
+                        customerEmail: customer.email,
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (menuContext) => [
+                  const PopupMenuItem(
+                    value: 'view',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('View Details'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 10),
+                        Text('Edit Customer'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline_rounded,
+                            size: 18, color: AppColors.error),
+                        SizedBox(width: 10),
+                        Text('Delete Customer',
+                            style: TextStyle(color: AppColors.error)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
               Icon(
                 Icons.chevron_right_rounded,
                 color:

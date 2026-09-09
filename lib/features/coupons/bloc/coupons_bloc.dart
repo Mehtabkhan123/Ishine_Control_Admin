@@ -14,6 +14,9 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
     on<CouponsSearchChanged>(_onSearchChanged);
     on<CouponsTypeFilterChanged>(_onTypeFilterChanged);
     on<CouponsRefreshed>(_onRefreshed);
+    on<CouponsCouponCreated>(_onCouponCreated);
+    on<CouponsCouponUpdated>(_onCouponUpdated);
+    on<CouponsCouponDeleted>(_onCouponDeleted);
   }
 
   Future<void> _onFetchStarted(
@@ -247,6 +250,58 @@ class CouponsBloc extends Bloc<CouponsEvent, CouponsState> {
     Emitter<CouponsState> emit,
   ) async {
     add(const CouponsFetchStarted(isRefresh: true));
+  }
+
+  void _onCouponCreated(
+    CouponsCouponCreated event,
+    Emitter<CouponsState> emit,
+  ) {
+    final existingIds =
+        state.coupons.map((c) => c.id).whereType<int>().toSet();
+    if (event.coupon.id != null && existingIds.contains(event.coupon.id)) {
+      return;
+    }
+
+    final updated = [event.coupon, ...state.coupons];
+    emit(state.copyWith(
+      coupons: updated,
+      totalCoupons:
+          state.totalCoupons > 0 ? state.totalCoupons + 1 : updated.length,
+      status: CouponsStatus.success,
+    ));
+  }
+
+  void _onCouponUpdated(
+    CouponsCouponUpdated event,
+    Emitter<CouponsState> emit,
+  ) {
+    if (event.coupon.id == null) return;
+    final index = state.coupons.indexWhere((c) => c.id == event.coupon.id);
+    if (index != -1) {
+      final updatedList = List<GETCouponReportModel>.from(state.coupons);
+      updatedList[index] = event.coupon;
+      emit(state.copyWith(
+        coupons: updatedList,
+      ));
+    }
+  }
+
+  void _onCouponDeleted(
+    CouponsCouponDeleted event,
+    Emitter<CouponsState> emit,
+  ) {
+    final existingIndex =
+        state.coupons.indexWhere((c) => c.id == event.couponId);
+    if (existingIndex == -1) return;
+
+    final updated =
+        state.coupons.where((c) => c.id != event.couponId).toList();
+    emit(state.copyWith(
+      coupons: updated,
+      totalCoupons:
+          state.totalCoupons > 0 ? state.totalCoupons - 1 : updated.length,
+      status: updated.isEmpty ? CouponsStatus.empty : state.status,
+    ));
   }
 
   String _extractErrorMessage(dynamic e) {

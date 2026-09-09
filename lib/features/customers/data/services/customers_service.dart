@@ -6,6 +6,8 @@ import '../../../../core/network/api_endpoints.dart';
 import '../../../system_status/data/services/system_status_service.dart';
 import '../models/get_customers_model.dart';
 import '../models/get_single_customers_model.dart';
+import '../models/put_update_customer_model.dart';
+import '../models/delete_customer_model.dart';
 
 /// Response wrapper containing parsed customers list and pagination headers metadata.
 class CustomersResponse {
@@ -287,6 +289,253 @@ class CustomersService {
     } catch (e, stackTrace) {
       throw WooCommerceParseException(
         message: 'Failed to parse customer details: ${e.toString()}',
+        statusCode: statusCode,
+        originalData: response.data,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Updates a customer in WooCommerce:
+  /// `PUT /wp-json/wc/v3/customers/{{customerId}}`
+  ///
+  /// Sends ONLY writable customer fields provided in [updateData].
+  Future<PutUpdateCustomerModel> updateCustomer(
+    int customerId,
+    Map<String, dynamic> updateData, {
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final effectiveBaseUrl = _sanitizeBaseUrl(baseUrl ?? EnvConfig.baseUrl);
+    final effectiveKey = (consumerKey ?? EnvConfig.consumerKey).trim();
+    final effectiveSecret = (consumerSecret ?? EnvConfig.consumerSecret).trim();
+
+    if (effectiveBaseUrl.isEmpty) {
+      throw const WooCommerceException(
+        message: 'Base URL is empty. Please configure WOOCOMMERCE_BASE_URL.',
+      );
+    }
+
+    if (effectiveKey.isEmpty || effectiveSecret.isEmpty) {
+      throw const WooCommerceException(
+        message:
+            'WooCommerce Consumer Key or Consumer Secret is missing. Please configure credentials.',
+      );
+    }
+
+    final isHttps = effectiveBaseUrl.toLowerCase().startsWith('https://');
+    final resolvedAuthMode = (authMode == WooCommerceAuthMode.auto)
+        ? (kIsWeb
+            ? WooCommerceAuthMode.queryParameters
+            : (isHttps
+                ? WooCommerceAuthMode.header
+                : WooCommerceAuthMode.queryParameters))
+        : authMode;
+
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    final queryParams = <String, dynamic>{};
+
+    if (resolvedAuthMode == WooCommerceAuthMode.header && !kIsWeb) {
+      final credentials = '$effectiveKey:$effectiveSecret';
+      final encodedAuth = base64Encode(utf8.encode(credentials));
+      headers['Authorization'] = 'Basic $encodedAuth';
+    } else {
+      queryParams['consumer_key'] = effectiveKey;
+      queryParams['consumer_secret'] = effectiveSecret;
+    }
+
+    final requestUri = '$effectiveBaseUrl${ApiEndpoints.customer(customerId)}';
+
+    Response response;
+    try {
+      response = await _dio.put(
+        requestUri,
+        data: updateData,
+        queryParameters: queryParams,
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.json,
+          validateStatus: (status) => true,
+          sendTimeout: kIsWeb ? null : const Duration(seconds: 25),
+          receiveTimeout: const Duration(seconds: 25),
+        ),
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw WooCommerceException.fromDioException(e);
+    } catch (e) {
+      throw WooCommerceException(
+        message:
+            'Network connection failed while updating customer #$customerId: ${e.toString()}',
+      );
+    }
+
+    final statusCode = response.statusCode ?? 0;
+    if (statusCode < 200 || statusCode >= 300) {
+      final errorData = response.data;
+      String errorMessage = 'Server responded with HTTP $statusCode';
+      if (errorData is Map<String, dynamic> && errorData['message'] != null) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map<String, dynamic> && errorData['code'] != null) {
+        errorMessage = 'Error: ${errorData['code']}';
+      }
+      throw WooCommerceException(
+        message: errorMessage,
+        statusCode: statusCode,
+        errorData: errorData,
+      );
+    }
+
+    try {
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        rawData = jsonDecode(rawData);
+      }
+
+      if (rawData is Map<String, dynamic>) {
+        return PutUpdateCustomerModel.fromJson(rawData);
+      }
+
+      throw const FormatException(
+          'Expected JSON object for customer update response');
+    } catch (e, stackTrace) {
+      throw WooCommerceParseException(
+        message: 'Failed to parse updated customer response: ${e.toString()}',
+        statusCode: statusCode,
+        originalData: response.data,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Permanently deletes a customer in WooCommerce:
+  /// `DELETE /wp-json/wc/v3/customers/{{customerId}}?force=true`
+  Future<DeleteCustomerModel> deleteCustomer(
+    int customerId, {
+    bool force = true,
+    String? baseUrl,
+    String? consumerKey,
+    String? consumerSecret,
+    WooCommerceAuthMode authMode = WooCommerceAuthMode.auto,
+    CancelToken? cancelToken,
+  }) async {
+    final effectiveBaseUrl = _sanitizeBaseUrl(baseUrl ?? EnvConfig.baseUrl);
+    final effectiveKey = (consumerKey ?? EnvConfig.consumerKey).trim();
+    final effectiveSecret = (consumerSecret ?? EnvConfig.consumerSecret).trim();
+
+    if (effectiveBaseUrl.isEmpty) {
+      throw const WooCommerceException(
+        message: 'Base URL is empty. Please configure WOOCOMMERCE_BASE_URL.',
+      );
+    }
+
+    if (effectiveKey.isEmpty || effectiveSecret.isEmpty) {
+      throw const WooCommerceException(
+        message:
+            'WooCommerce Consumer Key or Consumer Secret is missing. Please configure credentials.',
+      );
+    }
+
+    final isHttps = effectiveBaseUrl.toLowerCase().startsWith('https://');
+    final resolvedAuthMode = (authMode == WooCommerceAuthMode.auto)
+        ? (kIsWeb
+            ? WooCommerceAuthMode.queryParameters
+            : (isHttps
+                ? WooCommerceAuthMode.header
+                : WooCommerceAuthMode.queryParameters))
+        : authMode;
+
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      if (!kIsWeb) 'Content-Type': 'application/json',
+    };
+
+    final queryParams = <String, dynamic>{
+      'force': force.toString(),
+    };
+
+    if (resolvedAuthMode == WooCommerceAuthMode.header && !kIsWeb) {
+      final credentials = '$effectiveKey:$effectiveSecret';
+      final encodedAuth = base64Encode(utf8.encode(credentials));
+      headers['Authorization'] = 'Basic $encodedAuth';
+    } else {
+      queryParams['consumer_key'] = effectiveKey;
+      queryParams['consumer_secret'] = effectiveSecret;
+    }
+
+    final requestUri = '$effectiveBaseUrl${ApiEndpoints.customer(customerId)}';
+
+    Response response;
+    try {
+      response = await _dio.delete(
+        requestUri,
+        queryParameters: queryParams,
+        options: Options(
+          headers: headers,
+          responseType: ResponseType.json,
+          validateStatus: (status) => true,
+          sendTimeout: kIsWeb ? null : const Duration(seconds: 25),
+          receiveTimeout: const Duration(seconds: 25),
+        ),
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      throw WooCommerceException.fromDioException(e);
+    } catch (e) {
+      throw WooCommerceException(
+        message:
+            'Network connection failed while deleting customer #$customerId: ${e.toString()}',
+      );
+    }
+
+    final statusCode = response.statusCode ?? 0;
+
+    // Specific user-friendly handling for 404
+    if (statusCode == 404) {
+      throw WooCommerceException(
+        message: 'Customer #$customerId does not exist or has already been deleted.',
+        statusCode: 404,
+        errorData: response.data,
+      );
+    }
+
+    if (statusCode < 200 || statusCode >= 300) {
+      final errorData = response.data;
+      String errorMessage = 'Server responded with HTTP $statusCode';
+      if (errorData is Map<String, dynamic> && errorData['message'] != null) {
+        errorMessage = errorData['message'].toString();
+      } else if (errorData is Map<String, dynamic> && errorData['code'] != null) {
+        errorMessage = 'Error: ${errorData['code']}';
+      }
+      throw WooCommerceException(
+        message: errorMessage,
+        statusCode: statusCode,
+        errorData: errorData,
+      );
+    }
+
+    try {
+      dynamic rawData = response.data;
+      if (rawData is String) {
+        rawData = jsonDecode(rawData);
+      }
+
+      if (rawData is Map<String, dynamic>) {
+        return DeleteCustomerModel.fromJson(rawData);
+      }
+
+      throw const FormatException(
+          'Expected JSON object for customer delete response');
+    } catch (e, stackTrace) {
+      throw WooCommerceParseException(
+        message: 'Failed to parse deleted customer response: ${e.toString()}',
         statusCode: statusCode,
         originalData: response.data,
         stackTrace: stackTrace,

@@ -9,6 +9,7 @@ import '../../bloc/orders_state.dart';
 import '../../data/models/get_orders_model.dart' hide Image;
 import '../../data/repositories/orders_repository.dart';
 import 'order_details_screen.dart';
+import '../widgets/delete_order_dialog.dart';
 
 /// Redesigned Orders Screen with Samsung One UI aesthetics.
 /// Powered by WooCommerce GET /wp-json/wc/v3/orders with pagination,
@@ -788,6 +789,26 @@ class _OrdersViewState extends State<_OrdersView> {
                   ),
                 ],
               ),
+              const SizedBox(width: 8),
+              if (order.id != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  color: isDark
+                      ? AppColors.darkTextMuted
+                      : AppColors.lightTextMuted,
+                  hoverColor: AppColors.error.withValues(alpha: 0.12),
+                  tooltip: 'Delete Order',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () {
+                    DeleteOrderDialog.show(
+                      context,
+                      orderId: order.id!,
+                      displayOrderNumber: order.displayOrderNumber,
+                    );
+                  },
+                ),
             ],
           ),
         );

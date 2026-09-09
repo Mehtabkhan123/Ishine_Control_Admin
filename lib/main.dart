@@ -17,9 +17,20 @@ import 'features/reports/bloc/top_sellers_event.dart';
 import 'features/reports/data/repositories/reports_repository.dart';
 import 'features/orders/data/repositories/orders_repository.dart';
 import 'features/orders/bloc/single_order_cubit.dart';
+import 'features/orders/bloc/update_order_cubit.dart';
+import 'features/orders/bloc/delete_order_cubit.dart';
 import 'features/customers/data/repositories/customers_repository.dart';
+import 'features/customers/bloc/customers_bloc.dart';
+import 'features/customers/bloc/customers_event.dart';
 import 'features/customers/bloc/single_customer_cubit.dart';
+import 'features/customers/bloc/update_customer_cubit.dart';
+import 'features/customers/bloc/delete_customer_cubit.dart';
 import 'features/coupons/data/repositories/coupons_repository.dart';
+import 'features/coupons/bloc/coupons_bloc.dart';
+import 'features/coupons/bloc/coupons_event.dart';
+import 'features/coupons/bloc/create_coupon_cubit.dart';
+import 'features/coupons/bloc/update_coupon_cubit.dart';
+import 'features/coupons/bloc/delete_coupon_cubit.dart';
 import 'features/system_status/bloc/system_status_bloc.dart';
 import 'features/system_status/bloc/system_status_event.dart';
 import 'features/system_status/data/repositories/system_status_repository.dart';
@@ -132,9 +143,47 @@ class IShineAdminApp extends StatelessWidget {
             create: (context) =>
                 SingleOrderCubit(repository: effectiveOrdersRepo),
           ),
+          BlocProvider<UpdateOrderCubit>(
+            create: (context) =>
+                UpdateOrderCubit(repository: effectiveOrdersRepo),
+          ),
+          BlocProvider<DeleteOrderCubit>(
+            create: (context) =>
+                DeleteOrderCubit(repository: effectiveOrdersRepo),
+          ),
+          BlocProvider<CustomersBloc>(
+            create: (context) =>
+                CustomersBloc(repository: effectiveCustomersRepo)
+                  ..add(const CustomersFetchStarted()),
+          ),
           BlocProvider<SingleCustomerCubit>(
             create: (context) =>
                 SingleCustomerCubit(repository: effectiveCustomersRepo),
+          ),
+          BlocProvider<UpdateCustomerCubit>(
+            create: (context) =>
+                UpdateCustomerCubit(repository: effectiveCustomersRepo),
+          ),
+          BlocProvider<DeleteCustomerCubit>(
+            create: (context) =>
+                DeleteCustomerCubit(repository: effectiveCustomersRepo),
+          ),
+          BlocProvider<CouponsBloc>(
+            create: (context) =>
+                CouponsBloc(repository: effectiveCouponsRepo)
+                  ..add(const CouponsFetchStarted()),
+          ),
+          BlocProvider<CreateCouponCubit>(
+            create: (context) =>
+                CreateCouponCubit(repository: effectiveCouponsRepo),
+          ),
+          BlocProvider<UpdateCouponCubit>(
+            create: (context) =>
+                UpdateCouponCubit(repository: effectiveCouponsRepo),
+          ),
+          BlocProvider<DeleteCouponCubit>(
+            create: (context) =>
+                DeleteCouponCubit(repository: effectiveCouponsRepo),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(
