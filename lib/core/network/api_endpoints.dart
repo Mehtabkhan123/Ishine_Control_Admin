@@ -11,6 +11,9 @@ class ApiEndpoints {
   /// Orders
   static const String orders = '$wcV3Prefix/orders';
 
+  /// Specific Order by ID
+  static String order(int id) => '$orders/$id';
+
   /// Products
   static const String products = '$wcV3Prefix/products';
 

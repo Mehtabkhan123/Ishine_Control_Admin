@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/network/network_exceptions.dart';
@@ -12,11 +13,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
   final ProductsRepository repository;
   final ImagePicker _imagePicker;
 
-  GalleryUploadCubit({
-    required this.repository,
-    ImagePicker? imagePicker,
-  })  : _imagePicker = imagePicker ?? ImagePicker(),
-        super(const GalleryUploadState());
+  GalleryUploadCubit({required this.repository, ImagePicker? imagePicker})
+    : _imagePicker = imagePicker ?? ImagePicker(),
+      super(const GalleryUploadState());
 
   /// Seeds existing product images when editing an existing product.
   void setInitialImages(List<ProductImageRef>? images) {
@@ -26,14 +25,13 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     }
 
     final items = images.asMap().entries.map((entry) {
-      return GalleryImageItem.fromProductImageRef(entry.value, index: entry.key);
+      return GalleryImageItem.fromProductImageRef(
+        entry.value,
+        index: entry.key,
+      );
     }).toList();
 
-    emit(state.copyWith(
-      items: items,
-      clearError: true,
-      clearSuccess: true,
-    ));
+    emit(state.copyWith(items: items, clearError: true, clearSuccess: true));
   }
 
   /// Adds a direct image URL to the product gallery (supported WooCommerce workflow).
@@ -43,7 +41,10 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     if (trimmedUrl.isEmpty) return;
 
     final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-    final extractedName = name ?? _extractFilenameFromUrl(trimmedUrl) ?? 'image_$currentTimestamp.jpg';
+    final extractedName =
+        name ??
+        _extractFilenameFromUrl(trimmedUrl) ??
+        'image_$currentTimestamp.jpg';
 
     final newItem = GalleryImageItem(
       uniqueId: 'url_${currentTimestamp}_${state.items.length}',
@@ -54,16 +55,21 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     );
 
     final updatedItems = List<GalleryImageItem>.from(state.items)..add(newItem);
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: 'Image URL added to gallery',
-    ));
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage: 'Image URL added to gallery',
+      ),
+    );
   }
 
   /// Adds multiple direct image URLs to the product gallery.
   void addImageUrls(List<String> urls) {
-    final validUrls = urls.map((u) => u.trim()).where((u) => u.isNotEmpty).toList();
+    final validUrls = urls
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty)
+        .toList();
     if (validUrls.isEmpty) return;
 
     final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -71,7 +77,8 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
 
     for (int i = 0; i < validUrls.length; i++) {
       final url = validUrls[i];
-      final extractedName = _extractFilenameFromUrl(url) ?? 'image_${currentTimestamp}_$i.jpg';
+      final extractedName =
+          _extractFilenameFromUrl(url) ?? 'image_${currentTimestamp}_$i.jpg';
       newItems.add(
         GalleryImageItem(
           uniqueId: 'url_${currentTimestamp}_${state.items.length + i}',
@@ -83,12 +90,15 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
       );
     }
 
-    final updatedItems = List<GalleryImageItem>.from(state.items)..addAll(newItems);
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: '${newItems.length} image URL(s) added to gallery',
-    ));
+    final updatedItems = List<GalleryImageItem>.from(state.items)
+      ..addAll(newItems);
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage: '${newItems.length} image URL(s) added to gallery',
+      ),
+    );
   }
 
   /// Updates or links a direct remote URL to an existing gallery item (e.g. a locally picked image).
@@ -108,11 +118,13 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     final updatedItems = List<GalleryImageItem>.from(state.items);
     updatedItems[index] = updatedItem;
 
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: 'Image URL linked to "${currentItem.name}"',
-    ));
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage: 'Image URL linked to "${currentItem.name}"',
+      ),
+    );
   }
 
   /// Adds an existing item from the store's media library (`GET /wp-json/wp/v2/media`)
@@ -129,11 +141,13 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     );
 
     final updatedItems = List<GalleryImageItem>.from(state.items)..add(newItem);
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: 'Media added to gallery',
-    ));
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage: 'Media added to gallery',
+      ),
+    );
   }
 
   /// Adds multiple items from the store's media library to the product gallery.
@@ -146,7 +160,8 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
       final ref = refs[i];
       newItems.add(
         GalleryImageItem(
-          uniqueId: 'media_${ref.id ?? currentTimestamp}_${state.items.length + i}',
+          uniqueId:
+              'media_${ref.id ?? currentTimestamp}_${state.items.length + i}',
           id: ref.id,
           remoteUrl: ref.src,
           name: ref.name ?? 'Media #${ref.id ?? (i + 1)}',
@@ -156,12 +171,16 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
       );
     }
 
-    final updatedItems = List<GalleryImageItem>.from(state.items)..addAll(newItems);
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: '${newItems.length} media item(s) added from store library',
-    ));
+    final updatedItems = List<GalleryImageItem>.from(state.items)
+      ..addAll(newItems);
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage:
+            '${newItems.length} media item(s) added from store library',
+      ),
+    );
   }
 
   /// Links an existing store media library item to a specific gallery position.
@@ -180,11 +199,13 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     final updatedItems = List<GalleryImageItem>.from(state.items);
     updatedItems[index] = updatedItem;
 
-    emit(state.copyWith(
-      items: updatedItems,
-      clearError: true,
-      successMessage: 'Store media linked to "${currentItem.name}"',
-    ));
+    emit(
+      state.copyWith(
+        items: updatedItems,
+        clearError: true,
+        successMessage: 'Store media linked to "${currentItem.name}"',
+      ),
+    );
   }
 
   /// Loads media library items from WooCommerce/WordPress store.
@@ -240,22 +261,28 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
         );
       }
 
-      final updatedItems = List<GalleryImageItem>.from(state.items)..addAll(newItems);
-      emit(state.copyWith(
-        items: updatedItems,
-        isPicking: false,
-        clearError: true,
-        successMessage: '${newItems.length} photo(s) selected from device',
-      ));
+      final updatedItems = List<GalleryImageItem>.from(state.items)
+        ..addAll(newItems);
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          isPicking: false,
+          clearError: true,
+          successMessage: '${newItems.length} photo(s) selected from device',
+        ),
+      );
 
       if (autoUpload) {
         await uploadPending();
       }
     } catch (e) {
-      emit(state.copyWith(
-        isPicking: false,
-        errorMessage: 'Failed to pick images from device gallery: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          isPicking: false,
+          errorMessage:
+              'Failed to pick images from device gallery: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -265,7 +292,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
     emit(state.copyWith(isPicking: true, clearError: true));
 
     try {
-      final XFile? file = await _imagePicker.pickImage(source: ImageSource.camera);
+      final XFile? file = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+      );
       if (file == null) {
         emit(state.copyWith(isPicking: false));
         return;
@@ -273,7 +302,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
 
       final bytes = await file.readAsBytes();
       final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-      final filename = file.name.isNotEmpty ? file.name : 'photo_$currentTimestamp.jpg';
+      final filename = file.name.isNotEmpty
+          ? file.name
+          : 'photo_$currentTimestamp.jpg';
 
       final newItem = GalleryImageItem(
         uniqueId: 'camera_$currentTimestamp',
@@ -285,22 +316,27 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
         progress: 0.0,
       );
 
-      final updatedItems = List<GalleryImageItem>.from(state.items)..add(newItem);
-      emit(state.copyWith(
-        items: updatedItems,
-        isPicking: false,
-        clearError: true,
-        successMessage: 'Photo captured from camera',
-      ));
+      final updatedItems = List<GalleryImageItem>.from(state.items)
+        ..add(newItem);
+      emit(
+        state.copyWith(
+          items: updatedItems,
+          isPicking: false,
+          clearError: true,
+          successMessage: 'Photo captured from camera',
+        ),
+      );
 
       if (autoUpload) {
         await uploadPending();
       }
     } catch (e) {
-      emit(state.copyWith(
-        isPicking: false,
-        errorMessage: 'Failed to capture photo: ${e.toString()}',
-      ));
+      emit(
+        state.copyWith(
+          isPicking: false,
+          errorMessage: 'Failed to capture photo: ${e.toString()}',
+        ),
+      );
     }
   }
 
@@ -308,7 +344,8 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
   void removeImage(int index) {
     if (index < 0 || index >= state.items.length) return;
 
-    final updatedItems = List<GalleryImageItem>.from(state.items)..removeAt(index);
+    final updatedItems = List<GalleryImageItem>.from(state.items)
+      ..removeAt(index);
     emit(state.copyWith(items: updatedItems));
   }
 
@@ -371,11 +408,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
 
     if (pendingIndices.isEmpty) return;
 
-    emit(state.copyWith(
-      isUploading: true,
-      overallProgress: 0.0,
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(isUploading: true, overallProgress: 0.0, clearError: true),
+    );
 
     int completedCount = 0;
     String? firstErrorMessage;
@@ -401,7 +436,9 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
             if (index < progressItems.length) {
               progressItems[index] = progressItems[index].copyWith(progress: p);
               final overall = (completedCount + p) / pendingIndices.length;
-              emit(state.copyWith(items: progressItems, overallProgress: overall));
+              emit(
+                state.copyWith(items: progressItems, overallProgress: overall),
+              );
             }
           },
         );
@@ -417,10 +454,7 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
         );
         completedCount++;
         final overall = completedCount / pendingIndices.length;
-        emit(state.copyWith(
-          items: successItems,
-          overallProgress: overall,
-        ));
+        emit(state.copyWith(items: successItems, overallProgress: overall));
       } catch (e) {
         final errorMsg = e is WooCommerceException ? e.message : e.toString();
         firstErrorMessage ??= errorMsg;
@@ -433,13 +467,15 @@ class GalleryUploadCubit extends Cubit<GalleryUploadState> {
       }
     }
 
-    emit(state.copyWith(
-      isUploading: false,
-      errorMessage: firstErrorMessage,
-      successMessage: completedCount > 0
-          ? 'Uploaded $completedCount image(s) to product gallery.'
-          : null,
-    ));
+    emit(
+      state.copyWith(
+        isUploading: false,
+        errorMessage: firstErrorMessage,
+        successMessage: completedCount > 0
+            ? 'Uploaded $completedCount image(s) to product gallery.'
+            : null,
+      ),
+    );
   }
 
   /// Retries uploading a specific image by index.

@@ -3,6 +3,6 @@ A new Flutter project.
 
 /*
 git add .
-git commit -m "product uploade feature add"
+git commit -m "category feature add"
 git push origin main
 */

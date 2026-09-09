@@ -15,6 +15,8 @@ import 'features/reports/bloc/sales_report_event.dart';
 import 'features/reports/bloc/top_sellers_bloc.dart';
 import 'features/reports/bloc/top_sellers_event.dart';
 import 'features/reports/data/repositories/reports_repository.dart';
+import 'features/orders/data/repositories/orders_repository.dart';
+import 'features/orders/bloc/single_order_cubit.dart';
 import 'features/system_status/bloc/system_status_bloc.dart';
 import 'features/system_status/bloc/system_status_event.dart';
 import 'features/system_status/data/repositories/system_status_repository.dart';
@@ -35,12 +37,14 @@ Future<void> main() async {
   final systemStatusRepository = SystemStatusRepository(dioClient: dioClient);
   final reportsRepository = ReportsRepository(dioClient: dioClient);
   final productsRepository = ProductsRepository(dioClient: dioClient);
+  final ordersRepository = OrdersRepository(dioClient: dioClient);
 
   runApp(
     IShineAdminApp(
       systemStatusRepository: systemStatusRepository,
       reportsRepository: reportsRepository,
       productsRepository: productsRepository,
+      ordersRepository: ordersRepository,
     ),
   );
 }
@@ -49,16 +53,20 @@ class IShineAdminApp extends StatelessWidget {
   final SystemStatusRepository systemStatusRepository;
   final ReportsRepository reportsRepository;
   final ProductsRepository productsRepository;
+  final OrdersRepository? ordersRepository;
 
   const IShineAdminApp({
     super.key,
     required this.systemStatusRepository,
     required this.reportsRepository,
     required this.productsRepository,
+    this.ordersRepository,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveOrdersRepo = ordersRepository ?? OrdersRepository();
+
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<SystemStatusRepository>.value(
@@ -66,6 +74,7 @@ class IShineAdminApp extends StatelessWidget {
         ),
         RepositoryProvider<ReportsRepository>.value(value: reportsRepository),
         RepositoryProvider<ProductsRepository>.value(value: productsRepository),
+        RepositoryProvider<OrdersRepository>.value(value: effectiveOrdersRepo),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -97,6 +106,10 @@ class IShineAdminApp extends StatelessWidget {
           BlocProvider<UpdateProductBloc>(
             create: (context) =>
                 UpdateProductBloc(repository: productsRepository),
+          ),
+          BlocProvider<SingleOrderCubit>(
+            create: (context) =>
+                SingleOrderCubit(repository: effectiveOrdersRepo),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(
