@@ -65,6 +65,11 @@ class AdminNavRail extends StatelessWidget {
       selectedIcon: Icons.people_alt_rounded,
     ),
     AdminNavRailItem(
+      label: 'Coupons',
+      icon: Icons.confirmation_number_outlined,
+      selectedIcon: Icons.confirmation_number_rounded,
+    ),
+    AdminNavRailItem(
       label: 'Settings',
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings_rounded,

@@ -29,6 +29,15 @@ class ApiEndpoints {
   /// Customers
   static const String customers = '$wcV3Prefix/customers';
 
+  /// Specific Customer by ID
+  static String customer(int id) => '$customers/$id';
+
+  /// Coupons
+  static const String coupons = '$wcV3Prefix/coupons';
+
+  /// Specific Coupon by ID
+  static String coupon(int id) => '$coupons/$id';
+
   /// Reports
   static const String reports = '$wcV3Prefix/reports';
 

@@ -22,10 +22,7 @@ class OrderDetailScreen extends StatefulWidget {
     this.initialOrderNumber,
   });
 
-  static Route<void> route({
-    required int orderId,
-    String? initialOrderNumber,
-  }) {
+  static Route<void> route({required int orderId, String? initialOrderNumber}) {
     return MaterialPageRoute(
       builder: (context) {
         // Ensure SingleOrderCubit is available
@@ -55,9 +52,9 @@ class OrderDetailScreen extends StatefulWidget {
     required int orderId,
     String? initialOrderNumber,
   }) async {
-    await Navigator.of(context).push(
-      route(orderId: orderId, initialOrderNumber: initialOrderNumber),
-    );
+    await Navigator.of(
+      context,
+    ).push(route(orderId: orderId, initialOrderNumber: initialOrderNumber));
   }
 
   @override
@@ -113,8 +110,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -127,7 +127,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           );
         }
@@ -137,21 +138,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
         final order = isMatchingOrder
             ? state.order
             : state.cachedOrders[widget.orderId];
-        final displayTitle = order?.displayOrderNumber ??
+        final displayTitle =
+            order?.displayOrderNumber ??
             (widget.initialOrderNumber != null
                 ? '#${widget.initialOrderNumber}'
                 : '#${widget.orderId}');
 
         return Scaffold(
-          backgroundColor:
-              isDark ? AppColors.darkBackground : AppColors.lightBackground,
-          appBar: _buildOneUiAppBar(context, displayTitle, order, state, isDark),
+          backgroundColor: isDark
+              ? AppColors.darkBackground
+              : AppColors.lightBackground,
+          appBar: _buildOneUiAppBar(
+            context,
+            displayTitle,
+            order,
+            state,
+            isDark,
+          ),
           body: RefreshIndicator(
             color: AppColors.primary,
             onRefresh: () async {
-              await context
-                  .read<SingleOrderCubit>()
-                  .fetchSingleOrder(widget.orderId, forceRefresh: true);
+              await context.read<SingleOrderCubit>().fetchSingleOrder(
+                widget.orderId,
+                forceRefresh: true,
+              );
             },
             child: _buildBodyContent(context, state, isDark),
           ),
@@ -187,8 +197,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             children: [
               // Top Bar Row
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     // One UI Squircle Back Button
@@ -263,14 +275,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                           ? null
                           : () {
                               context.read<SingleOrderCubit>().fetchSingleOrder(
-                                    widget.orderId,
-                                    forceRefresh: true,
-                                  );
+                                widget.orderId,
+                                forceRefresh: true,
+                              );
                             },
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: isDark
                               ? AppColors.darkCard
@@ -333,10 +347,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 unselectedLabelColor: isDark
                     ? AppColors.darkTextMuted
                     : AppColors.lightTextMuted,
-                labelStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                unselectedLabelStyle:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                labelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
                 dividerColor: Colors.transparent,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 tabs: _sections.map((s) {
@@ -534,7 +552,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
@@ -563,12 +583,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 icon: Icons.shopping_basket_outlined,
                 action: TextButton(
                   onPressed: () => _tabController.animateTo(1),
-                  child: const Text('View All Items',
-                      style: TextStyle(fontSize: 12)),
+                  child: const Text(
+                    'View All Items',
+                    style: TextStyle(fontSize: 12),
+                  ),
                 ),
                 isDark: isDark,
                 child: _buildLineItemsList(
-                    order.lineItems?.take(3).toList() ?? [], order, isDark),
+                  order.lineItems?.take(3).toList() ?? [],
+                  order,
+                  isDark,
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -633,7 +658,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               const SizedBox(height: 14),
               if (items.isEmpty)
                 _buildEmptySectionMessage(
-                    'No line items found for this order.', isDark)
+                  'No line items found for this order.',
+                  isDark,
+                )
               else
                 _buildOneUiCard(
                   title: 'Purchased Products',
@@ -690,7 +717,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                         order.customerEmailAddress,
                         Icons.copy_rounded,
                         () => _copyToClipboard(
-                            context, order.customerEmailAddress, 'Email'),
+                          context,
+                          order.customerEmailAddress,
+                          'Email',
+                        ),
                         isDark,
                       ),
                     if (order.customerPhone.isNotEmpty)
@@ -699,7 +729,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                         order.customerPhone,
                         Icons.copy_rounded,
                         () => _copyToClipboard(
-                            context, order.customerPhone, 'Phone number'),
+                          context,
+                          order.customerPhone,
+                          'Phone number',
+                        ),
                         isDark,
                       ),
                     if (order.customerIpAddress?.isNotEmpty == true)
@@ -870,7 +903,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                         order.transactionId!,
                         Icons.copy_rounded,
                         () => _copyToClipboard(
-                            context, order.transactionId!, 'Transaction ID'),
+                          context,
+                          order.transactionId!,
+                          'Transaction ID',
+                        ),
                         isDark,
                       ),
                     _buildDetailRow(
@@ -878,7 +914,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                       order.datePaid != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(
                               DateTime.tryParse(order.datePaid!) ??
-                                  DateTime.now())
+                                  DateTime.now(),
+                            )
                           : 'Awaiting Payment',
                       isDark,
                     ),
@@ -1016,8 +1053,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.comment_outlined,
-                              size: 16, color: AppColors.warning),
+                          Icon(
+                            Icons.comment_outlined,
+                            size: 16,
+                            color: AppColors.warning,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Customer Note',
@@ -1055,17 +1095,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                   children: [
                     _buildDetailRow('Order Key', order.orderKey ?? '—', isDark),
                     _buildDetailRow(
-                        'Created Via', order.createdVia ?? 'storefront', isDark),
-                    _buildDetailRow('WooCommerce Version',
-                        order.version ?? 'Unknown', isDark),
-                    _buildDetailRow('Currency Symbol',
-                        order.currencySymbol ?? order.currency ?? '—', isDark),
+                      'Created Via',
+                      order.createdVia ?? 'storefront',
+                      isDark,
+                    ),
+                    _buildDetailRow(
+                      'WooCommerce Version',
+                      order.version ?? 'Unknown',
+                      isDark,
+                    ),
+                    _buildDetailRow(
+                      'Currency Symbol',
+                      order.currencySymbol ?? order.currency ?? '—',
+                      isDark,
+                    ),
                     _buildDetailRow(
                       'Date Modified',
                       order.dateModified != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(
                               DateTime.tryParse(order.dateModified!) ??
-                                  DateTime.now())
+                                  DateTime.now(),
+                            )
                           : '—',
                       isDark,
                     ),
@@ -1074,7 +1124,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                       order.dateCompleted != null
                           ? DateFormat('MMM d, yyyy • h:mm a').format(
                               DateTime.tryParse(order.dateCompleted!) ??
-                                  DateTime.now())
+                                  DateTime.now(),
+                            )
                           : 'Not yet completed',
                       isDark,
                     ),
@@ -1125,10 +1176,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 width: 52,
                 height: 52,
                 child: imgSrc != null && imgSrc.isNotEmpty
-                    ? SafeNetworkImage(
-                        imageUrl: imgSrc,
-                        fit: BoxFit.cover,
-                      )
+                    ? SafeNetworkImage(imageUrl: imgSrc, fit: BoxFit.cover)
                     : Container(
                         color: isDark
                             ? AppColors.darkBackground
@@ -1164,7 +1212,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                       if (item.sku?.isNotEmpty == true)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: isDark
                                 ? AppColors.darkBackground
@@ -1233,21 +1283,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
   Widget _buildFinancialSummary(GetSingleOrderModel order, bool isDark) {
     return Column(
       children: [
-        _buildCostLine(
-          'Products Subtotal',
-          order.formattedSubtotal,
-          isDark,
-        ),
-        _buildCostLine(
-          'Shipping Cost',
-          order.formattedShipping,
-          isDark,
-        ),
-        _buildCostLine(
-          'Tax Total',
-          order.formattedTax,
-          isDark,
-        ),
+        _buildCostLine('Products Subtotal', order.formattedSubtotal, isDark),
+        _buildCostLine('Shipping Cost', order.formattedShipping, isDark),
+        _buildCostLine('Tax Total', order.formattedTax, isDark),
         if (order.discountTotalDouble > 0)
           _buildCostLine(
             'Discounts Applied',
@@ -1289,11 +1327,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               fontWeight: isGrandTotal ? FontWeight.w800 : FontWeight.w500,
               color: isDark
                   ? (isGrandTotal
-                      ? AppColors.darkTextPrimary
-                      : AppColors.darkTextSecondary)
+                        ? AppColors.darkTextPrimary
+                        : AppColors.darkTextSecondary)
                   : (isGrandTotal
-                      ? AppColors.lightTextPrimary
-                      : AppColors.lightTextSecondary),
+                        ? AppColors.lightTextPrimary
+                        : AppColors.lightTextSecondary),
             ),
           ),
           Text(
@@ -1301,7 +1339,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             style: TextStyle(
               fontSize: isGrandTotal ? 16 : 13,
               fontWeight: isGrandTotal ? FontWeight.w900 : FontWeight.w700,
-              color: valueColor ??
+              color:
+                  valueColor ??
                   (isDark
                       ? AppColors.darkTextPrimary
                       : AppColors.lightTextPrimary),
@@ -1471,7 +1510,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-                color: valueColor ??
+                color:
+                    valueColor ??
                     (isDark
                         ? AppColors.darkTextPrimary
                         : AppColors.lightTextPrimary),
@@ -1561,11 +1601,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.copy_rounded,
-                size: 11,
-                color: isDark
-                    ? AppColors.darkTextMuted
-                    : AppColors.lightTextMuted),
+            Icon(
+              Icons.copy_rounded,
+              size: 11,
+              color: isDark
+                  ? AppColors.darkTextMuted
+                  : AppColors.lightTextMuted,
+            ),
           ],
         ),
       ),
@@ -1689,8 +1731,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 height: 180,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color:
-                      isDark ? AppColors.darkSurface : const Color(0xFFE2E8F0),
+                  color: isDark
+                      ? AppColors.darkSurface
+                      : const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(22),
                 ),
               ),
@@ -1701,8 +1744,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
                 height: 240,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color:
-                      isDark ? AppColors.darkSurface : const Color(0xFFE2E8F0),
+                  color: isDark
+                      ? AppColors.darkSurface
+                      : const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(22),
                 ),
               ),
@@ -1713,11 +1757,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
     );
   }
 
-  Widget _buildErrorView(
-    BuildContext context,
-    String? message,
-    bool isDark,
-  ) {
+  Widget _buildErrorView(BuildContext context, String? message, bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1757,9 +1797,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen>
             FilledButton.icon(
               onPressed: () {
                 context.read<SingleOrderCubit>().fetchSingleOrder(
-                      widget.orderId,
-                      forceRefresh: true,
-                    );
+                  widget.orderId,
+                  forceRefresh: true,
+                );
               },
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Retry'),

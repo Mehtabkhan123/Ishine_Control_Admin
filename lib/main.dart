@@ -17,6 +17,9 @@ import 'features/reports/bloc/top_sellers_event.dart';
 import 'features/reports/data/repositories/reports_repository.dart';
 import 'features/orders/data/repositories/orders_repository.dart';
 import 'features/orders/bloc/single_order_cubit.dart';
+import 'features/customers/data/repositories/customers_repository.dart';
+import 'features/customers/bloc/single_customer_cubit.dart';
+import 'features/coupons/data/repositories/coupons_repository.dart';
 import 'features/system_status/bloc/system_status_bloc.dart';
 import 'features/system_status/bloc/system_status_event.dart';
 import 'features/system_status/data/repositories/system_status_repository.dart';
@@ -38,6 +41,8 @@ Future<void> main() async {
   final reportsRepository = ReportsRepository(dioClient: dioClient);
   final productsRepository = ProductsRepository(dioClient: dioClient);
   final ordersRepository = OrdersRepository(dioClient: dioClient);
+  final customersRepository = CustomersRepository(dioClient: dioClient);
+  final couponsRepository = CouponsRepository(dioClient: dioClient);
 
   runApp(
     IShineAdminApp(
@@ -45,6 +50,8 @@ Future<void> main() async {
       reportsRepository: reportsRepository,
       productsRepository: productsRepository,
       ordersRepository: ordersRepository,
+      customersRepository: customersRepository,
+      couponsRepository: couponsRepository,
     ),
   );
 }
@@ -54,6 +61,8 @@ class IShineAdminApp extends StatelessWidget {
   final ReportsRepository reportsRepository;
   final ProductsRepository productsRepository;
   final OrdersRepository? ordersRepository;
+  final CustomersRepository? customersRepository;
+  final CouponsRepository? couponsRepository;
 
   const IShineAdminApp({
     super.key,
@@ -61,11 +70,17 @@ class IShineAdminApp extends StatelessWidget {
     required this.reportsRepository,
     required this.productsRepository,
     this.ordersRepository,
+    this.customersRepository,
+    this.couponsRepository,
   });
 
   @override
   Widget build(BuildContext context) {
     final effectiveOrdersRepo = ordersRepository ?? OrdersRepository();
+    final effectiveCustomersRepo =
+        customersRepository ?? CustomersRepository();
+    final effectiveCouponsRepo =
+        couponsRepository ?? CouponsRepository();
 
     return MultiRepositoryProvider(
       providers: [
@@ -75,6 +90,12 @@ class IShineAdminApp extends StatelessWidget {
         RepositoryProvider<ReportsRepository>.value(value: reportsRepository),
         RepositoryProvider<ProductsRepository>.value(value: productsRepository),
         RepositoryProvider<OrdersRepository>.value(value: effectiveOrdersRepo),
+        RepositoryProvider<CustomersRepository>.value(
+          value: effectiveCustomersRepo,
+        ),
+        RepositoryProvider<CouponsRepository>.value(
+          value: effectiveCouponsRepo,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -110,6 +131,10 @@ class IShineAdminApp extends StatelessWidget {
           BlocProvider<SingleOrderCubit>(
             create: (context) =>
                 SingleOrderCubit(repository: effectiveOrdersRepo),
+          ),
+          BlocProvider<SingleCustomerCubit>(
+            create: (context) =>
+                SingleCustomerCubit(repository: effectiveCustomersRepo),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(

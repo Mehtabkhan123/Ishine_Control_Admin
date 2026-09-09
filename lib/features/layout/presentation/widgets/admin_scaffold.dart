@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../coupons/presentation/screens/coupons_screen.dart';
 import '../../../customers/presentation/screens/customers_screen.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../orders/presentation/screens/orders_screen.dart';
@@ -49,6 +50,10 @@ class _AdminScaffoldState extends State<AdminScaffold> {
       'subtitle': 'Customer directory, accounts & buyer insights',
     },
     {
+      'title': 'Coupons',
+      'subtitle': 'Store discount codes, promotional rules & vouchers',
+    },
+    {
       'title': 'Settings',
       'subtitle': 'WooCommerce REST API, store preferences & diagnostics',
     },
@@ -72,6 +77,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
       const OrdersScreen(),
       const ProductsScreen(),
       const CustomersScreen(),
+      const CouponsScreen(),
       const SettingsScreen(),
     ];
 

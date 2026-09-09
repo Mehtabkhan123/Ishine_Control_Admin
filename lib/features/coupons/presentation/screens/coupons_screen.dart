@@ -1,48 +1,47 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/safe_network_image.dart';
-import '../../bloc/customers_bloc.dart';
-import '../../bloc/customers_event.dart';
-import '../../bloc/customers_state.dart';
-import '../../data/models/get_customers_model.dart';
-import '../../data/repositories/customers_repository.dart';
-import 'customer_details_screen.dart';
+import '../../bloc/coupons_bloc.dart';
+import '../../bloc/coupons_event.dart';
+import '../../bloc/coupons_state.dart';
+import '../../data/models/get_coupon_report_model.dart';
+import '../../data/repositories/coupons_repository.dart';
+import 'coupon_details_screen.dart';
 
-/// Redesigned Customers Screen with Samsung One UI 9 aesthetics.
-/// Powered by WooCommerce GET /wp-json/wc/v3/customers with pagination (per_page=20),
-/// registered_date descending sort, infinite scrolling, role filtering, search,
-/// and live customer details navigation.
-class CustomersScreen extends StatelessWidget {
-  const CustomersScreen({super.key});
+/// Modern premium Coupons Screen with Samsung One UI 9 aesthetics.
+/// Powered by WooCommerce GET /wp-json/wc/v3/coupons?per_page=50&page=1 with
+/// infinite scrolling, discount type filtering, search, and live details navigation.
+class CouponsScreen extends StatelessWidget {
+  const CouponsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    CustomersRepository repository;
+    CouponsRepository repository;
     try {
-      repository = context.read<CustomersRepository>();
+      repository = context.read<CouponsRepository>();
     } catch (_) {
-      repository = CustomersRepository();
+      repository = CouponsRepository();
     }
 
-    return BlocProvider<CustomersBloc>(
-      create: (_) => CustomersBloc(repository: repository)
-        ..add(const CustomersFetchStarted()),
-      child: const _CustomersView(),
+    return BlocProvider<CouponsBloc>(
+      create: (_) => CouponsBloc(repository: repository)
+        ..add(const CouponsFetchStarted()),
+      child: const _CouponsView(),
     );
   }
 }
 
-class _CustomersView extends StatefulWidget {
-  const _CustomersView();
+class _CouponsView extends StatefulWidget {
+  const _CouponsView();
 
   @override
-  State<_CustomersView> createState() => _CustomersViewState();
+  State<_CouponsView> createState() => _CouponsViewState();
 }
 
-class _CustomersViewState extends State<_CustomersView> {
+class _CouponsViewState extends State<_CouponsView> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
@@ -66,11 +65,10 @@ class _CustomersViewState extends State<_CustomersView> {
     if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.offset;
-    // Trigger next page when within 200px of bottom
     if (currentScroll >= (maxScroll - 200)) {
-      final bloc = context.read<CustomersBloc>();
+      final bloc = context.read<CouponsBloc>();
       if (!bloc.state.hasReachedMax && !bloc.state.isLoadingMore) {
-        bloc.add(const CustomersLoadMore());
+        bloc.add(const CouponsLoadMore());
       }
     }
   }
@@ -79,7 +77,7 @@ class _CustomersViewState extends State<_CustomersView> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 400), () {
       if (mounted) {
-        context.read<CustomersBloc>().add(CustomersSearchChanged(query));
+        context.read<CouponsBloc>().add(CouponsSearchChanged(query));
       }
     });
   }
@@ -88,9 +86,9 @@ class _CustomersViewState extends State<_CustomersView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocConsumer<CustomersBloc, CustomersState>(
+    return BlocConsumer<CouponsBloc, CouponsState>(
       listener: (context, state) {
-        if (state.errorMessage != null && state.customers.isNotEmpty) {
+        if (state.errorMessage != null && state.coupons.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage!),
@@ -105,8 +103,8 @@ class _CustomersViewState extends State<_CustomersView> {
         return RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () async {
-            final bloc = context.read<CustomersBloc>();
-            bloc.add(const CustomersRefreshed());
+            final bloc = context.read<CouponsBloc>();
+            bloc.add(const CouponsRefreshed());
             await bloc.stream
                 .firstWhere((s) => !s.isLoading && !s.isLoadingMore);
           },
@@ -121,7 +119,7 @@ class _CustomersViewState extends State<_CustomersView> {
                 _buildKpiGrid(context, state, isDark),
                 const SizedBox(height: 24),
 
-                // Main Customers Container
+                // Main Coupons Container
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
@@ -156,15 +154,15 @@ class _CustomersViewState extends State<_CustomersView> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Customers Content by State
-                      if (state.isLoading && state.customers.isEmpty)
+                      // Coupons Content by State
+                      if (state.isLoading && state.coupons.isEmpty)
                         _buildLoadingShimmer(isDark)
-                      else if (state.isFailure && state.customers.isEmpty)
+                      else if (state.isFailure && state.coupons.isEmpty)
                         _buildErrorState(context, state, isDark)
                       else if (state.isEmpty)
                         _buildEmptyState(context, state, isDark)
                       else
-                        _buildCustomersList(context, state, isDark),
+                        _buildCouponsList(context, state, isDark),
                     ],
                   ),
                 ),
@@ -178,52 +176,51 @@ class _CustomersViewState extends State<_CustomersView> {
 
   Widget _buildKpiGrid(
     BuildContext context,
-    CustomersState state,
+    CouponsState state,
     bool isDark,
   ) {
-    final totalCountStr = state.totalCustomers > 0
-        ? NumberFormat('#,###').format(state.totalCustomers)
-        : (state.customers.isNotEmpty
-            ? state.customers.length.toString()
-            : '...');
-
-    final payingCount = state.payingCustomersCount;
-    final nonPayingCount = state.nonPayingCustomersCount;
+    final totalCountStr = state.totalCoupons > 0
+        ? NumberFormat('#,###').format(state.totalCoupons)
+        : (state.coupons.isNotEmpty ? state.coupons.length.toString() : '...');
 
     final kpis = [
       {
-        'title': 'Total Customers',
+        'title': 'Total Coupons',
         'value': totalCountStr,
-        'subtitle': 'WooCommerce v3 Directory',
-        'icon': Icons.people_alt_rounded,
+        'subtitle': 'Configured promotions',
+        'icon': Icons.confirmation_number_rounded,
         'color': AppColors.primary,
         'gradient': AppColors.brandGradient,
       },
       {
-        'title': 'Paying Customers',
-        'value': state.customers.isNotEmpty ? payingCount.toString() : '...',
-        'subtitle': 'Verified buyers with orders',
-        'icon': Icons.verified_user_rounded,
+        'title': 'Active Discounts',
+        'value': state.coupons.isNotEmpty
+            ? state.activeCouponsCount.toString()
+            : '...',
+        'subtitle': 'Ready for checkout',
+        'icon': Icons.check_circle_outline_rounded,
         'color': AppColors.success,
         'gradient': AppColors.emeraldGradient,
       },
       {
-        'title': 'Registered Accounts',
-        'value': state.customers.isNotEmpty ? nonPayingCount.toString() : '...',
-        'subtitle': 'Awaiting first purchase',
-        'icon': Icons.person_outline_rounded,
-        'color': AppColors.warning,
-        'gradient': AppColors.amberGradient,
-      },
-      {
-        'title': 'Newest Signups',
-        'value': state.customers.isNotEmpty
-            ? '${state.customers.length} Loaded'
-            : '0',
-        'subtitle': 'Sorted by registered date',
-        'icon': Icons.fiber_new_rounded,
+        'title': 'Free Shipping',
+        'value': state.coupons.isNotEmpty
+            ? state.freeShippingCount.toString()
+            : '...',
+        'subtitle': 'Zero-shipping incentives',
+        'icon': Icons.local_shipping_outlined,
         'color': AppColors.secondary,
         'gradient': AppColors.skyGradient,
+      },
+      {
+        'title': 'Expired / Draft',
+        'value': state.coupons.isNotEmpty
+            ? state.expiredCouponsCount.toString()
+            : '...',
+        'subtitle': 'Past validity date',
+        'icon': Icons.timer_off_outlined,
+        'color': AppColors.warning,
+        'gradient': AppColors.amberGradient,
       },
     ];
 
@@ -324,15 +321,14 @@ class _CustomersViewState extends State<_CustomersView> {
 
   Widget _buildFilterBar(
     BuildContext context,
-    CustomersState state,
+    CouponsState state,
     bool isDark,
   ) {
-    final roles = [
-      {'label': 'All Roles', 'value': 'all'},
-      {'label': 'Customer', 'value': 'customer'},
-      {'label': 'Subscriber', 'value': 'subscriber'},
-      {'label': 'Administrator', 'value': 'administrator'},
-      {'label': 'Shop Manager', 'value': 'shop_manager'},
+    final types = [
+      {'label': 'All Coupons', 'value': 'all'},
+      {'label': 'Percentage (%)', 'value': 'percent'},
+      {'label': 'Fixed Cart (\$)', 'value': 'fixed_cart'},
+      {'label': 'Fixed Product (\$/item)', 'value': 'fixed_product'},
     ];
 
     return LayoutBuilder(
@@ -378,8 +374,7 @@ class _CustomersViewState extends State<_CustomersView> {
                                   : AppColors.lightTextPrimary,
                             ),
                             decoration: InputDecoration(
-                              hintText:
-                                  'Search by customer name, email, username...',
+                              hintText: 'Search coupons by code or description...',
                               hintStyle: TextStyle(
                                 fontSize: 13,
                                 color: isDark
@@ -402,8 +397,8 @@ class _CustomersViewState extends State<_CustomersView> {
                             onPressed: () {
                               _searchController.clear();
                               context
-                                  .read<CustomersBloc>()
-                                  .add(const CustomersSearchChanged(''));
+                                  .read<CouponsBloc>()
+                                  .add(const CouponsSearchChanged(''));
                             },
                           ),
                       ],
@@ -412,12 +407,12 @@ class _CustomersViewState extends State<_CustomersView> {
                 ),
                 const SizedBox(width: 12),
                 Tooltip(
-                  message: 'Refresh directory',
+                  message: 'Reload coupons',
                   child: IconButton.filledTonal(
                     onPressed: () {
                       context
-                          .read<CustomersBloc>()
-                          .add(const CustomersRefreshed());
+                          .read<CouponsBloc>()
+                          .add(const CouponsRefreshed());
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 20),
                     style: IconButton.styleFrom(
@@ -434,20 +429,20 @@ class _CustomersViewState extends State<_CustomersView> {
             ),
             const SizedBox(height: 14),
 
-            // Role Filter Pills
+            // Filter Pills
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: roles.map((r) {
-                  final isSelected = state.selectedRole == r['value'];
+                children: types.map((t) {
+                  final isSelected = state.selectedType == t['value'];
 
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: InkWell(
                       onTap: () {
                         context
-                            .read<CustomersBloc>()
-                            .add(CustomersRoleFilterChanged(r['value']!));
+                            .read<CouponsBloc>()
+                            .add(CouponsTypeFilterChanged(t['value']!));
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: AnimatedContainer(
@@ -472,7 +467,7 @@ class _CustomersViewState extends State<_CustomersView> {
                           ),
                         ),
                         child: Text(
-                          r['label']!,
+                          t['label']!,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight:
@@ -496,37 +491,31 @@ class _CustomersViewState extends State<_CustomersView> {
     );
   }
 
-  Widget _buildCustomersList(
+  Widget _buildCouponsList(
     BuildContext context,
-    CustomersState state,
+    CouponsState state,
     bool isDark,
   ) {
-    final customers = state.customers;
+    final coupons = state.coupons;
 
     return Column(
       children: [
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: customers.length,
+          itemCount: coupons.length,
           separatorBuilder: (_, _) => Divider(
             color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
             height: 16,
           ),
           itemBuilder: (context, index) {
-            final customer = customers[index];
+            final coupon = coupons[index];
             return InkWell(
               onTap: () {
-                if (customer.id != null) {
-                  CustomerDetailsScreen.show(
-                    context,
-                    customerId: customer.id!,
-                    initialCustomer: customer,
-                  );
-                }
+                CouponDetailsScreen.show(context, coupon: coupon);
               },
               borderRadius: BorderRadius.circular(16),
-              child: _buildCustomerItemTile(context, customer, isDark),
+              child: _buildCouponItemTile(context, coupon, isDark),
             );
           },
         ),
@@ -548,7 +537,7 @@ class _CustomersViewState extends State<_CustomersView> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Loading more customers (Page ${state.currentPage + 1})...',
+                  'Loading more coupons (Page ${state.currentPage + 1})...',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -561,11 +550,11 @@ class _CustomersViewState extends State<_CustomersView> {
             ),
           ),
           const SizedBox(height: 12),
-        ] else if (state.hasReachedMax && state.customers.isNotEmpty) ...[
+        ] else if (state.hasReachedMax && state.coupons.isNotEmpty) ...[
           const SizedBox(height: 20),
           Center(
             child: Text(
-              'All ${state.customers.length} customers loaded',
+              'All ${state.coupons.length} coupons loaded',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark
@@ -580,90 +569,56 @@ class _CustomersViewState extends State<_CustomersView> {
     );
   }
 
-  Widget _buildCustomerItemTile(
+  Widget _buildCouponItemTile(
     BuildContext context,
-    GETCustomersModel customer,
+    GETCouponReportModel coupon,
     bool isDark,
   ) {
-    final isPaying = customer.isPayingCustomer == true;
+    final isExpired = coupon.isExpired;
+    final code = coupon.code?.toUpperCase() ?? 'CODE';
 
-    // Format registration date
-    final registeredDateStr = customer.parsedDateCreated != null
-        ? DateFormat('MMM dd, yyyy').format(customer.parsedDateCreated!)
-        : (customer.dateCreated ?? '');
+    final expiresText = coupon.parsedDateExpires != null
+        ? 'Expires ${DateFormat('MMM dd, yyyy').format(coupon.parsedDateExpires!)}'
+        : 'No expiration date';
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 700;
+        final isCompact = constraints.maxWidth < 680;
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar with SafeNetworkImage and Initials Gradient Squircle
+              // Ticket Voucher Icon
               Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  gradient: isPaying
-                      ? AppColors.emeraldGradient
+                  gradient: isExpired
+                      ? AppColors.roseGradient
                       : AppColors.brandGradient,
                   borderRadius: BorderRadius.circular(16), // One UI Squircle
                   boxShadow: [
                     BoxShadow(
-                      color: (isPaying ? AppColors.success : AppColors.primary)
+                      color: (isExpired ? AppColors.error : AppColors.primary)
                           .withValues(alpha: 0.25),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: customer.avatarUrl != null &&
-                          customer.avatarUrl!.trim().isNotEmpty
-                      ? SafeNetworkImage(
-                          imageUrl: customer.avatarUrl!,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          placeholder: Center(
-                            child: Text(
-                              customer.initials,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          errorWidget: Center(
-                            child: Text(
-                              customer.initials,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            customer.initials,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
+                child: const Center(
+                  child: Icon(
+                    Icons.confirmation_number_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
 
-              // Customer Name, Email, Username, Badges, Phone, Location
+              // Code, Discount amount, type, restrictions
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,58 +628,93 @@ class _CustomersViewState extends State<_CustomersView> {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(
-                          customer.displayName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
+                        // Coupon Code Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.lightTextPrimary,
+                                ? AppColors.darkBackground
+                                : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.lightBorder,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                code,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: 'monospace',
+                                  letterSpacing: 0.8,
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : AppColors.lightTextPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: code));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Code $code copied'),
+                                      behavior: SnackBarBehavior.floating,
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                },
+                                child: const Icon(
+                                  Icons.copy_rounded,
+                                  size: 13,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        _buildRoleChip(customer.roleDisplayName, isDark),
-                        _buildPayingChip(isPaying, isDark),
+                        _buildStatusChip(coupon.statusDisplayName, isExpired, isDark),
+                        if (coupon.freeShipping == true)
+                          _buildFreeShippingChip(isDark),
                       ],
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
 
-                    // Email & Username
+                    // Discount Type & Amount
                     Row(
                       children: [
-                        if (customer.email != null &&
-                            customer.email!.trim().isNotEmpty) ...[
-                          Flexible(
-                            child: Text(
-                              customer.email!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.lightTextSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                        Text(
+                          coupon.formattedDiscount,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: isExpired
+                                ? AppColors.error
+                                : AppColors.primary,
                           ),
-                        ],
-                        if (customer.username != null &&
-                            customer.username!.trim().isNotEmpty) ...[
-                          Text(
-                            ' • @${customer.username!}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '• ${coupon.discountTypeDisplayName}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
 
-                    // Location & Phone
+                    // Spend requirements & Usage
                     Wrap(
                       spacing: 12,
                       runSpacing: 2,
@@ -733,7 +723,7 @@ class _CustomersViewState extends State<_CustomersView> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.location_on_outlined,
+                              Icons.repeat_rounded,
                               size: 13,
                               color: isDark
                                   ? AppColors.darkTextMuted
@@ -741,7 +731,7 @@ class _CustomersViewState extends State<_CustomersView> {
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              customer.locationSummary,
+                              coupon.usageDisplay,
                               style: TextStyle(
                                 fontSize: 11,
                                 color: isDark
@@ -751,12 +741,14 @@ class _CustomersViewState extends State<_CustomersView> {
                             ),
                           ],
                         ),
-                        if (customer.primaryPhone != null)
+                        if (coupon.minimumAmount != null &&
+                            coupon.minimumAmount != '0.00' &&
+                            coupon.minimumAmount != '0')
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.phone_outlined,
+                                Icons.shopping_bag_outlined,
                                 size: 13,
                                 color: isDark
                                     ? AppColors.darkTextMuted
@@ -764,7 +756,7 @@ class _CustomersViewState extends State<_CustomersView> {
                               ),
                               const SizedBox(width: 3),
                               Text(
-                                customer.primaryPhone!,
+                                coupon.minSpendDisplay,
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: isDark
@@ -776,16 +768,18 @@ class _CustomersViewState extends State<_CustomersView> {
                           ),
                       ],
                     ),
-                    if (isCompact && registeredDateStr.isNotEmpty) ...[
+                    if (isCompact) ...[
                       const SizedBox(height: 2),
                       Text(
-                        'Joined: $registeredDateStr',
+                        expiresText,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: isDark
-                              ? AppColors.darkTextMuted
-                              : AppColors.lightTextMuted,
+                          color: isExpired
+                              ? AppColors.error
+                              : (isDark
+                                  ? AppColors.darkTextMuted
+                                  : AppColors.lightTextMuted),
                         ),
                       ),
                     ],
@@ -793,29 +787,33 @@ class _CustomersViewState extends State<_CustomersView> {
                 ),
               ),
 
-              if (!isCompact && registeredDateStr.isNotEmpty) ...[
+              if (!isCompact) ...[
                 const SizedBox(width: 14),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      registeredDateStr,
+                      expiresText,
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isExpired
+                            ? AppColors.error
+                            : (isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Registered date',
+                      coupon.isExpired ? 'Status: Expired' : 'Active promotion',
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark
-                            ? AppColors.darkTextMuted
-                            : AppColors.lightTextMuted,
+                        color: isExpired
+                            ? AppColors.error
+                            : (isDark
+                                ? AppColors.darkTextMuted
+                                : AppColors.lightTextMuted),
                       ),
                     ),
                   ],
@@ -835,31 +833,20 @@ class _CustomersViewState extends State<_CustomersView> {
     );
   }
 
-  Widget _buildRoleChip(String role, bool isDark) {
+  Widget _buildStatusChip(String status, bool isExpired, bool isDark) {
     Color bg;
     Color fg;
 
-    switch (role.toLowerCase()) {
-      case 'administrator':
-        bg = AppColors.error.withValues(alpha: 0.15);
-        fg = AppColors.error;
-        break;
-      case 'shop_manager':
-      case 'shop manager':
-        bg = AppColors.warning.withValues(alpha: 0.15);
-        fg = AppColors.warning;
-        break;
-      case 'subscriber':
-        bg = AppColors.secondary.withValues(alpha: 0.15);
-        fg = AppColors.secondary;
-        break;
-      case 'customer':
-      default:
-        bg = isDark
-            ? AppColors.primary.withValues(alpha: 0.2)
-            : AppColors.indigoPastel;
-        fg = AppColors.primary;
-        break;
+    if (isExpired) {
+      bg = AppColors.error.withValues(alpha: 0.15);
+      fg = AppColors.error;
+    } else if (status.toLowerCase() == 'active' ||
+        status.toLowerCase() == 'publish') {
+      bg = AppColors.success.withValues(alpha: 0.15);
+      fg = AppColors.success;
+    } else {
+      bg = AppColors.warning.withValues(alpha: 0.15);
+      fg = AppColors.warning;
     }
 
     return Container(
@@ -869,7 +856,7 @@ class _CustomersViewState extends State<_CustomersView> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        role,
+        status,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
@@ -879,38 +866,28 @@ class _CustomersViewState extends State<_CustomersView> {
     );
   }
 
-  Widget _buildPayingChip(bool isPaying, bool isDark) {
+  Widget _buildFreeShippingChip(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: isPaying
-            ? AppColors.success.withValues(alpha: 0.15)
-            : (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0)),
+        color: AppColors.secondary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isPaying ? Icons.verified_rounded : Icons.person_outline_rounded,
+            Icons.local_shipping_rounded,
             size: 11,
-            color: isPaying
-                ? AppColors.success
-                : (isDark
-                    ? AppColors.darkTextMuted
-                    : AppColors.lightTextMuted),
+            color: AppColors.secondary,
           ),
-          const SizedBox(width: 3),
+          SizedBox(width: 3),
           Text(
-            isPaying ? 'Paying' : 'Standard',
+            'Free Shipping',
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w800,
-              color: isPaying
-                  ? AppColors.success
-                  : (isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.lightTextSecondary),
+              color: AppColors.secondary,
             ),
           ),
         ],
@@ -935,7 +912,7 @@ class _CustomersViewState extends State<_CustomersView> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Loading customers from WooCommerce...',
+              'Loading coupons from WooCommerce...',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -951,11 +928,11 @@ class _CustomersViewState extends State<_CustomersView> {
 
   Widget _buildEmptyState(
     BuildContext context,
-    CustomersState state,
+    CouponsState state,
     bool isDark,
   ) {
     final hasFilter =
-        state.searchQuery.isNotEmpty || state.selectedRole != 'all';
+        state.searchQuery.isNotEmpty || state.selectedType != 'all';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
@@ -970,21 +947,21 @@ class _CustomersViewState extends State<_CustomersView> {
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.people_outline_rounded,
+                Icons.confirmation_number_outlined,
                 size: 38,
                 color: AppColors.accent,
               ),
             ),
             const SizedBox(height: 16),
             const Text(
-              'No customers found',
+              'No coupons found',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               hasFilter
-                  ? 'No customers match your search criteria or role filter.'
-                  : 'There are currently no customer accounts in this WooCommerce store.',
+                  ? 'No promotions match your search keyword or discount type filter.'
+                  : 'There are currently no discount coupons created in this WooCommerce store.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -998,11 +975,11 @@ class _CustomersViewState extends State<_CustomersView> {
                 onPressed: () {
                   _searchController.clear();
                   context
-                      .read<CustomersBloc>()
-                      .add(const CustomersSearchChanged(''));
+                      .read<CouponsBloc>()
+                      .add(const CouponsSearchChanged(''));
                   context
-                      .read<CustomersBloc>()
-                      .add(const CustomersRoleFilterChanged('all'));
+                      .read<CouponsBloc>()
+                      .add(const CouponsTypeFilterChanged('all'));
                 },
                 icon: const Icon(Icons.clear_all_rounded, size: 18),
                 label: const Text('Reset Filters'),
@@ -1019,7 +996,7 @@ class _CustomersViewState extends State<_CustomersView> {
 
   Widget _buildErrorState(
     BuildContext context,
-    CustomersState state,
+    CouponsState state,
     bool isDark,
   ) {
     return Padding(
@@ -1042,7 +1019,7 @@ class _CustomersViewState extends State<_CustomersView> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Failed to load customers',
+              'Failed to load coupons',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
@@ -1059,9 +1036,7 @@ class _CustomersViewState extends State<_CustomersView> {
             const SizedBox(height: 18),
             FilledButton.icon(
               onPressed: () {
-                context
-                    .read<CustomersBloc>()
-                    .add(const CustomersFetchStarted());
+                context.read<CouponsBloc>().add(const CouponsFetchStarted());
               },
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Try Again'),

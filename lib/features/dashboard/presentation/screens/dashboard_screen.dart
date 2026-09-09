@@ -673,11 +673,18 @@ class DashboardScreen extends StatelessWidget {
         'tabIndex': 3,
       },
       {
+        'title': 'Coupons & Promos',
+        'subtitle': 'Vouchers & discount rules',
+        'icon': Icons.confirmation_number_rounded,
+        'gradient': AppColors.amberGradient,
+        'tabIndex': 4,
+      },
+      {
         'title': 'Store Settings',
         'subtitle': 'API configuration & diagnostics',
         'icon': Icons.settings_rounded,
         'gradient': AppColors.emeraldGradient,
-        'tabIndex': 4,
+        'tabIndex': 5,
       },
     ];
 
