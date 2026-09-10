@@ -8,6 +8,12 @@ class ApiEndpoints {
   /// System Status
   static const String systemStatus = '$wcV3Prefix/system_status';
 
+  /// System Status Tools (`GET /wp-json/wc/v3/system_status/tools`)
+  static const String systemStatusTools = '$systemStatus/tools';
+
+  /// Specific System Status Tool by ID (`GET /wp-json/wc/v3/system_status/tools/<id>`)
+  static String systemStatusTool(String id) => '$systemStatusTools/$id';
+
   /// Orders
   static const String orders = '$wcV3Prefix/orders';
 
@@ -49,6 +55,45 @@ class ApiEndpoints {
 
   /// Settings
   static const String settings = '$wcV3Prefix/settings';
+
+  /// General Settings (`GET /wp-json/wc/v3/settings/general`)
+  static const String generalSettings = '$settings/general';
+
+  /// Specific General Setting by ID (`GET /wp-json/wc/v3/settings/general/<id>`)
+  static String generalSetting(String id) => '$generalSettings/$id';
+
+  /// Product Settings (`GET /wp-json/wc/v3/settings/products`)
+  static const String productSettings = '$settings/products';
+
+  /// Specific Product Setting by ID (`GET /wp-json/wc/v3/settings/products/<id>`)
+  static String productSetting(String id) => '$productSettings/$id';
+
+  /// Tax Settings (`GET /wp-json/wc/v3/settings/tax`)
+  static const String taxSettings = '$settings/tax';
+
+  /// Specific Tax Setting by ID (`GET /wp-json/wc/v3/settings/tax/<id>`)
+  static String taxSetting(String id) => '$taxSettings/$id';
+
+  /// Specific Settings Group by ID (`GET /wp-json/wc/v3/settings/<group>`)
+  static String settingsGroup(String group) => '$settings/$group';
+
+  /// Shipping Zones
+  static const String shippingZones = '$wcV3Prefix/shipping/zones';
+
+  /// Specific Shipping Zone by ID
+  static String shippingZone(int id) => '$shippingZones/$id';
+
+  /// Tax Rates
+  static const String taxes = '$wcV3Prefix/taxes';
+
+  /// Specific Tax Rate by ID
+  static String tax(int id) => '$taxes/$id';
+
+  /// Payment Gateways
+  static const String paymentGateways = '$wcV3Prefix/payment_gateways';
+
+  /// Specific Payment Gateway by ID
+  static String paymentGateway(String id) => '$paymentGateways/$id';
 
   /// Root prefix for WordPress v2 REST API
   static const String wpV2Prefix = '/wp-json/wp/v2';

@@ -321,5 +321,89 @@ void main() {
         ),
       );
     });
+
+    group('fetchSystemStatusTools & execution', () {
+      final sampleToolsResponse = [
+        {
+          'id': 'clear_transients',
+          'name': 'WooCommerce transients',
+          'action': 'Clear transients',
+          'description': 'This tool will clear the WooCommerce transients cache.',
+          '_links': {
+            'item': [
+              {
+                'href': 'https://example.com/wp-json/wc/v3/system_status/tools/clear_transients',
+                'embeddable': true,
+              }
+            ]
+          }
+        },
+        {
+          'id': 'clear_expired_transients',
+          'name': 'Expired transients',
+          'action': 'Clear expired transients',
+          'description': 'This tool will clear expired transients.',
+        },
+      ];
+
+      test('fetches and parses list of tools successfully', () async {
+        when(() => mockDio.get(
+              any(),
+              queryParameters: any(named: 'queryParameters'),
+              options: any(named: 'options'),
+              cancelToken: any(named: 'cancelToken'),
+            )).thenAnswer((_) async => Response(
+              data: sampleToolsResponse,
+              statusCode: 200,
+              requestOptions: RequestOptions(path: ''),
+            ));
+
+        final tools = await service.fetchSystemStatusTools();
+        expect(tools.length, 2);
+        expect(tools.first.id, 'clear_transients');
+        expect(tools.first.action, 'Clear transients');
+        expect(tools.first.links?.item?.first.embeddable, true);
+      });
+
+      test('fetches single tool by ID successfully', () async {
+        when(() => mockDio.get(
+              any(),
+              queryParameters: any(named: 'queryParameters'),
+              options: any(named: 'options'),
+              cancelToken: any(named: 'cancelToken'),
+            )).thenAnswer((_) async => Response(
+              data: sampleToolsResponse.first,
+              statusCode: 200,
+              requestOptions: RequestOptions(path: ''),
+            ));
+
+        final tool = await service.fetchSystemStatusTool(id: 'clear_transients');
+        expect(tool.id, 'clear_transients');
+        expect(tool.name, 'WooCommerce transients');
+      });
+
+      test('executes tool via PUT successfully', () async {
+        when(() => mockDio.put(
+              any(),
+              data: any(named: 'data'),
+              queryParameters: any(named: 'queryParameters'),
+              options: any(named: 'options'),
+              cancelToken: any(named: 'cancelToken'),
+            )).thenAnswer((_) async => Response(
+              data: {
+                'id': 'clear_transients',
+                'name': 'WooCommerce transients',
+                'action': 'Clear transients',
+                'description': 'Transients cleared successfully.',
+              },
+              statusCode: 200,
+              requestOptions: RequestOptions(path: ''),
+            ));
+
+        final tool = await service.executeSystemStatusTool(id: 'clear_transients');
+        expect(tool.id, 'clear_transients');
+        expect(tool.description, contains('cleared'));
+      });
+    });
   });
 }

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../system_status/bloc/system_status_bloc.dart';
 import '../../../system_status/bloc/system_status_event.dart';
 import '../../../system_status/bloc/system_status_state.dart';
+import '../../../system_status/presentation/screens/system_status_tools_screen.dart';
 
 /// Modal dialog displaying comprehensive WooCommerce system status diagnostics
 /// formatted with Samsung One UI aesthetics.
@@ -138,6 +139,24 @@ Theme: ${status.themeName} ${status.themeVersion}
                             icon: const Icon(Icons.copy_rounded, size: 15),
                             label: const Text('Copy Report'),
                           ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SystemStatusToolsScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.build_circle_outlined, size: 15),
+                          label: const Text('System Tools'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         FilledButton(
                           onPressed: () => Navigator.of(context).pop(),

@@ -680,11 +680,25 @@ class DashboardScreen extends StatelessWidget {
         'tabIndex': 4,
       },
       {
+        'title': 'Shipping Zones',
+        'subtitle': 'Delivery regions & methods',
+        'icon': Icons.local_shipping_rounded,
+        'gradient': AppColors.skyGradient,
+        'tabIndex': 5,
+      },
+      {
+        'title': 'Tax Rates',
+        'subtitle': 'Sales tax & fiscal rules',
+        'icon': Icons.receipt_long_rounded,
+        'gradient': AppColors.emeraldGradient,
+        'tabIndex': 6,
+      },
+      {
         'title': 'Store Settings',
         'subtitle': 'API configuration & diagnostics',
         'icon': Icons.settings_rounded,
-        'gradient': AppColors.emeraldGradient,
-        'tabIndex': 5,
+        'gradient': AppColors.brandGradient,
+        'tabIndex': 7,
       },
     ];
 

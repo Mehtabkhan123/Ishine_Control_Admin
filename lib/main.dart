@@ -31,8 +31,30 @@ import 'features/coupons/bloc/coupons_event.dart';
 import 'features/coupons/bloc/create_coupon_cubit.dart';
 import 'features/coupons/bloc/update_coupon_cubit.dart';
 import 'features/coupons/bloc/delete_coupon_cubit.dart';
+import 'features/shipping/data/repositories/shipping_repository.dart';
+import 'features/shipping/bloc/shipping_zones_bloc.dart';
+import 'features/shipping/bloc/shipping_zones_event.dart';
+import 'features/taxes/data/repositories/taxes_repository.dart';
+import 'features/taxes/bloc/tax_rates_bloc.dart';
+import 'features/taxes/bloc/tax_rates_event.dart';
+import 'features/taxes/bloc/create_tax_rate_cubit.dart';
+import 'features/payment_gateways/data/repositories/payment_gateways_repository.dart';
+import 'features/payment_gateways/bloc/payment_gateways_bloc.dart';
+import 'features/payment_gateways/bloc/payment_gateways_event.dart';
+import 'features/payment_gateways/bloc/update_payment_gateway_cubit.dart';
+import 'features/settings/data/repositories/general_settings_repository.dart';
+import 'features/settings/data/repositories/product_settings_repository.dart';
+import 'features/settings/data/repositories/tax_settings_repository.dart';
+import 'features/settings/bloc/general_settings_bloc.dart';
+import 'features/settings/bloc/general_settings_event.dart';
+import 'features/settings/bloc/product_settings_bloc.dart';
+import 'features/settings/bloc/product_settings_event.dart';
+import 'features/settings/bloc/tax_settings_bloc.dart';
+import 'features/settings/bloc/tax_settings_event.dart';
 import 'features/system_status/bloc/system_status_bloc.dart';
 import 'features/system_status/bloc/system_status_event.dart';
+import 'features/system_status/bloc/system_status_tools_bloc.dart';
+import 'features/system_status/bloc/system_status_tools_event.dart';
 import 'features/system_status/data/repositories/system_status_repository.dart';
 
 Future<void> main() async {
@@ -54,6 +76,16 @@ Future<void> main() async {
   final ordersRepository = OrdersRepository(dioClient: dioClient);
   final customersRepository = CustomersRepository(dioClient: dioClient);
   final couponsRepository = CouponsRepository(dioClient: dioClient);
+  final shippingRepository = ShippingRepository(dioClient: dioClient);
+  final taxesRepository = TaxesRepository(dioClient: dioClient);
+  final paymentGatewaysRepository =
+      PaymentGatewaysRepository(dioClient: dioClient);
+  final generalSettingsRepository =
+      GeneralSettingsRepository(dioClient: dioClient);
+  final productSettingsRepository =
+      ProductSettingsRepository(dioClient: dioClient);
+  final taxSettingsRepository =
+      TaxSettingsRepository(dioClient: dioClient);
 
   runApp(
     IShineAdminApp(
@@ -63,6 +95,12 @@ Future<void> main() async {
       ordersRepository: ordersRepository,
       customersRepository: customersRepository,
       couponsRepository: couponsRepository,
+      shippingRepository: shippingRepository,
+      taxesRepository: taxesRepository,
+      paymentGatewaysRepository: paymentGatewaysRepository,
+      generalSettingsRepository: generalSettingsRepository,
+      productSettingsRepository: productSettingsRepository,
+      taxSettingsRepository: taxSettingsRepository,
     ),
   );
 }
@@ -74,6 +112,12 @@ class IShineAdminApp extends StatelessWidget {
   final OrdersRepository? ordersRepository;
   final CustomersRepository? customersRepository;
   final CouponsRepository? couponsRepository;
+  final ShippingRepository? shippingRepository;
+  final TaxesRepository? taxesRepository;
+  final PaymentGatewaysRepository? paymentGatewaysRepository;
+  final GeneralSettingsRepository? generalSettingsRepository;
+  final ProductSettingsRepository? productSettingsRepository;
+  final TaxSettingsRepository? taxSettingsRepository;
 
   const IShineAdminApp({
     super.key,
@@ -83,6 +127,12 @@ class IShineAdminApp extends StatelessWidget {
     this.ordersRepository,
     this.customersRepository,
     this.couponsRepository,
+    this.shippingRepository,
+    this.taxesRepository,
+    this.paymentGatewaysRepository,
+    this.generalSettingsRepository,
+    this.productSettingsRepository,
+    this.taxSettingsRepository,
   });
 
   @override
@@ -92,6 +142,18 @@ class IShineAdminApp extends StatelessWidget {
         customersRepository ?? CustomersRepository();
     final effectiveCouponsRepo =
         couponsRepository ?? CouponsRepository();
+    final effectiveShippingRepo =
+        shippingRepository ?? ShippingRepository();
+    final effectiveTaxesRepo =
+        taxesRepository ?? TaxesRepository();
+    final effectivePaymentGatewaysRepo =
+        paymentGatewaysRepository ?? PaymentGatewaysRepository();
+    final effectiveGeneralSettingsRepo =
+        generalSettingsRepository ?? GeneralSettingsRepository();
+    final effectiveProductSettingsRepo =
+        productSettingsRepository ?? ProductSettingsRepository();
+    final effectiveTaxSettingsRepo =
+        taxSettingsRepository ?? TaxSettingsRepository();
 
     return MultiRepositoryProvider(
       providers: [
@@ -106,6 +168,24 @@ class IShineAdminApp extends StatelessWidget {
         ),
         RepositoryProvider<CouponsRepository>.value(
           value: effectiveCouponsRepo,
+        ),
+        RepositoryProvider<ShippingRepository>.value(
+          value: effectiveShippingRepo,
+        ),
+        RepositoryProvider<TaxesRepository>.value(
+          value: effectiveTaxesRepo,
+        ),
+        RepositoryProvider<PaymentGatewaysRepository>.value(
+          value: effectivePaymentGatewaysRepo,
+        ),
+        RepositoryProvider<GeneralSettingsRepository>.value(
+          value: effectiveGeneralSettingsRepo,
+        ),
+        RepositoryProvider<ProductSettingsRepository>.value(
+          value: effectiveProductSettingsRepo,
+        ),
+        RepositoryProvider<TaxSettingsRepository>.value(
+          value: effectiveTaxSettingsRepo,
         ),
       ],
       child: MultiBlocProvider(
@@ -184,6 +264,49 @@ class IShineAdminApp extends StatelessWidget {
           BlocProvider<DeleteCouponCubit>(
             create: (context) =>
                 DeleteCouponCubit(repository: effectiveCouponsRepo),
+          ),
+          BlocProvider<ShippingZonesBloc>(
+            create: (context) =>
+                ShippingZonesBloc(repository: effectiveShippingRepo)
+                  ..add(const ShippingZonesFetchStarted()),
+          ),
+          BlocProvider<TaxRatesBloc>(
+            create: (context) =>
+                TaxRatesBloc(repository: effectiveTaxesRepo)
+                  ..add(const TaxRatesFetchStarted()),
+          ),
+          BlocProvider<CreateTaxRateCubit>(
+            create: (context) =>
+                CreateTaxRateCubit(repository: effectiveTaxesRepo),
+          ),
+          BlocProvider<PaymentGatewaysBloc>(
+            create: (context) =>
+                PaymentGatewaysBloc(repository: effectivePaymentGatewaysRepo)
+                  ..add(const PaymentGatewaysFetchStarted()),
+          ),
+          BlocProvider<UpdatePaymentGatewayCubit>(
+            create: (context) => UpdatePaymentGatewayCubit(
+                repository: effectivePaymentGatewaysRepo),
+          ),
+          BlocProvider<GeneralSettingsBloc>(
+            create: (context) =>
+                GeneralSettingsBloc(repository: effectiveGeneralSettingsRepo)
+                  ..add(const GeneralSettingsFetchStarted()),
+          ),
+          BlocProvider<ProductSettingsBloc>(
+            create: (context) =>
+                ProductSettingsBloc(repository: effectiveProductSettingsRepo)
+                  ..add(const ProductSettingsFetchStarted()),
+          ),
+          BlocProvider<TaxSettingsBloc>(
+            create: (context) =>
+                TaxSettingsBloc(repository: effectiveTaxSettingsRepo)
+                  ..add(const TaxSettingsFetchStarted()),
+          ),
+          BlocProvider<SystemStatusToolsBloc>(
+            create: (context) =>
+                SystemStatusToolsBloc(repository: systemStatusRepository)
+                  ..add(const SystemStatusToolsFetchStarted()),
           ),
         ],
         child: BlocBuilder<ThemeCubit, ThemeMode>(

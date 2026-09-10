@@ -70,6 +70,21 @@ class AdminNavRail extends StatelessWidget {
       selectedIcon: Icons.confirmation_number_rounded,
     ),
     AdminNavRailItem(
+      label: 'Shipping',
+      icon: Icons.local_shipping_outlined,
+      selectedIcon: Icons.local_shipping_rounded,
+    ),
+    AdminNavRailItem(
+      label: 'Taxes',
+      icon: Icons.receipt_outlined,
+      selectedIcon: Icons.receipt_rounded,
+    ),
+    AdminNavRailItem(
+      label: 'Payments',
+      icon: Icons.account_balance_wallet_outlined,
+      selectedIcon: Icons.account_balance_wallet_rounded,
+    ),
+    AdminNavRailItem(
       label: 'Settings',
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings_rounded,

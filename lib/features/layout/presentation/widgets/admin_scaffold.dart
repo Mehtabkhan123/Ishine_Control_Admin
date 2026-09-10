@@ -5,6 +5,9 @@ import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../orders/presentation/screens/orders_screen.dart';
 import '../../../products/presentation/screens/products_screen.dart';
 import '../../../settings/presentation/screens/settings_screen.dart';
+import '../../../shipping/presentation/screens/shipping_zones_screen.dart';
+import '../../../taxes/presentation/screens/tax_rates_screen.dart';
+import '../../../payment_gateways/presentation/screens/payment_gateways_screen.dart';
 import 'admin_header.dart';
 import 'admin_nav_rail.dart';
 
@@ -54,6 +57,18 @@ class _AdminScaffoldState extends State<AdminScaffold> {
       'subtitle': 'Store discount codes, promotional rules & vouchers',
     },
     {
+      'title': 'Shipping Zones',
+      'subtitle': 'Manage delivery regions, rates & evaluation priority',
+    },
+    {
+      'title': 'Tax Rates',
+      'subtitle': 'Manage regional tax rates, priorities & classes',
+    },
+    {
+      'title': 'Payment Gateways',
+      'subtitle': 'Manage checkout payment methods, gateways & rules',
+    },
+    {
       'title': 'Settings',
       'subtitle': 'WooCommerce REST API, store preferences & diagnostics',
     },
@@ -78,6 +93,9 @@ class _AdminScaffoldState extends State<AdminScaffold> {
       const ProductsScreen(),
       const CustomersScreen(),
       const CouponsScreen(),
+      const ShippingZonesScreen(),
+      const TaxRatesScreen(),
+      const PaymentGatewaysScreen(),
       const SettingsScreen(),
     ];
 
