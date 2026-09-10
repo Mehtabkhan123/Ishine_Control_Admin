@@ -3,15 +3,17 @@ import '../data/models/post_create_model.dart';
 
 abstract class ProductsState extends Equatable {
   final String selectedCategory;
+  final int? selectedCategoryId;
   final String searchQuery;
 
   const ProductsState({
     this.selectedCategory = 'all',
+    this.selectedCategoryId,
     this.searchQuery = '',
   });
 
   @override
-  List<Object?> get props => [selectedCategory, searchQuery];
+  List<Object?> get props => [selectedCategory, selectedCategoryId, searchQuery];
 }
 
 class ProductsInitial extends ProductsState {
@@ -24,33 +26,46 @@ class ProductsLoading extends ProductsState {
   const ProductsLoading({
     this.previousProducts,
     super.selectedCategory,
+    super.selectedCategoryId,
     super.searchQuery,
   });
 
   @override
-  List<Object?> get props => [previousProducts, selectedCategory, searchQuery];
+  List<Object?> get props => [
+        previousProducts,
+        selectedCategory,
+        selectedCategoryId,
+        searchQuery,
+      ];
 }
 
 class ProductsSuccess extends ProductsState {
   final List<PostCreateModel> products;
-  final List<ProductCategoryRef> categories;
+  final List<GetCategoriesModel> categories;
   final DateTime lastUpdated;
 
   const ProductsSuccess({
     required this.products,
     this.categories = const [],
     super.selectedCategory = 'all',
+    super.selectedCategoryId,
     super.searchQuery = '',
     required this.lastUpdated,
   });
 
   List<PostCreateModel> get filteredProducts {
     return products.where((p) {
-      if (selectedCategory != 'all') {
+      if (selectedCategoryId != null) {
+        final matchesCatId =
+            p.categories?.any((c) => c.id == selectedCategoryId) ?? false;
+        if (!matchesCatId) return false;
+      } else if (selectedCategory != 'all') {
         final matchesCat = p.categories?.any(
               (c) =>
-                  (c.slug ?? '').toLowerCase() == selectedCategory.toLowerCase() ||
-                  (c.name ?? '').toLowerCase() == selectedCategory.toLowerCase(),
+                  (c.slug ?? '').toLowerCase() ==
+                      selectedCategory.toLowerCase() ||
+                  (c.name ?? '').toLowerCase() ==
+                      selectedCategory.toLowerCase(),
             ) ??
             false;
         if (!matchesCat) return false;
@@ -60,8 +75,11 @@ class ProductsSuccess extends ProductsState {
         final query = searchQuery.trim().toLowerCase();
         final nameMatch = (p.name ?? '').toLowerCase().contains(query);
         final skuMatch = (p.sku ?? '').toLowerCase().contains(query);
-        final descMatch = (p.shortDescription ?? '').toLowerCase().contains(query);
-        final catMatch = p.categories?.any((c) => (c.name ?? '').toLowerCase().contains(query)) ?? false;
+        final descMatch =
+            (p.shortDescription ?? '').toLowerCase().contains(query);
+        final catMatch = p.categories
+                ?.any((c) => (c.name ?? '').toLowerCase().contains(query)) ??
+            false;
         if (!nameMatch && !skuMatch && !descMatch && !catMatch) {
           return false;
         }
@@ -98,8 +116,10 @@ class ProductsSuccess extends ProductsState {
 
   ProductsSuccess copyWith({
     List<PostCreateModel>? products,
-    List<ProductCategoryRef>? categories,
+    List<GetCategoriesModel>? categories,
     String? selectedCategory,
+    int? selectedCategoryId,
+    bool clearCategoryId = false,
     String? searchQuery,
     DateTime? lastUpdated,
   }) {
@@ -107,6 +127,9 @@ class ProductsSuccess extends ProductsState {
       products: products ?? this.products,
       categories: categories ?? this.categories,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedCategoryId: clearCategoryId
+          ? null
+          : (selectedCategoryId ?? this.selectedCategoryId),
       searchQuery: searchQuery ?? this.searchQuery,
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
@@ -117,22 +140,25 @@ class ProductsSuccess extends ProductsState {
         products,
         categories,
         selectedCategory,
+        selectedCategoryId,
         searchQuery,
         lastUpdated,
       ];
 }
 
 class ProductsEmpty extends ProductsState {
-  final List<ProductCategoryRef> categories;
+  final List<GetCategoriesModel> categories;
 
   const ProductsEmpty({
     this.categories = const [],
     super.selectedCategory,
+    super.selectedCategoryId,
     super.searchQuery,
   });
 
   @override
-  List<Object?> get props => [categories, selectedCategory, searchQuery];
+  List<Object?> get props =>
+      [categories, selectedCategory, selectedCategoryId, searchQuery];
 }
 
 class ProductsFailure extends ProductsState {
@@ -147,6 +173,7 @@ class ProductsFailure extends ProductsState {
     this.isTimeout = false,
     this.isNetworkError = false,
     super.selectedCategory,
+    super.selectedCategoryId,
     super.searchQuery,
   });
 
@@ -157,6 +184,7 @@ class ProductsFailure extends ProductsState {
         isTimeout,
         isNetworkError,
         selectedCategory,
+        selectedCategoryId,
         searchQuery,
       ];
 }

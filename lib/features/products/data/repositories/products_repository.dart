@@ -215,7 +215,10 @@ class ProductsRepository {
   }
 
   /// Retrieves categories with caching and deduplication.
-  Future<List<ProductCategoryRef>> getCategories({
+  /// `GET /wp-json/wc/v3/products/categories?per_page=50&page=1`
+  Future<List<GetCategoriesModel>> getCategories({
+    int page = 1,
+    int perPage = 50,
     bool forceRefresh = false,
     String? baseUrl,
     String? consumerKey,
@@ -234,6 +237,8 @@ class ProductsRepository {
     }
 
     final requestFuture = _service.fetchCategories(
+      page: page,
+      perPage: perPage,
       baseUrl: baseUrl,
       consumerKey: consumerKey,
       consumerSecret: consumerSecret,

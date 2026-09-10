@@ -8,6 +8,7 @@ import '../../bloc/products_state.dart';
 import '../../data/models/post_create_model.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
+import '../widgets/categories_overview_dialog.dart';
 import '../widgets/create_category_dialog.dart';
 
 /// Redesigned Products Catalog Screen with Samsung One UI aesthetics.
@@ -414,11 +415,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     );
                   },
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () => CategoriesOverviewDialog.show(context),
+                  icon: const Icon(Icons.category_outlined, size: 18),
+                  label: Text(
+                    isCompact ? 'Categories' : 'Categories (${categories.length})',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: BorderSide(
+                      color: isDark
+                          ? AppColors.darkBorder
+                          : AppColors.lightBorder,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 OutlinedButton.icon(
                   onPressed: _openAddCategory,
                   icon: const Icon(Icons.create_new_folder_outlined, size: 18),
-                  label: Text(isCompact ? 'Category' : 'Add Category'),
+                  label: Text(isCompact ? 'Add Cat' : 'Add Category'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark
                         ? AppColors.darkTextPrimary
@@ -465,21 +491,50 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   _buildCategoryPill(
                     label: 'All Products',
                     value: 'all',
-                    isSelected: selectedCategory == 'all',
+                    isSelected: (state.selectedCategoryId == null && selectedCategory == 'all'),
                     isDark: isDark,
                   ),
                   ...categories.map((cat) {
                     final catValue = cat.slug ?? cat.name ?? '';
+                    final isCatSelected = (state.selectedCategoryId != null && state.selectedCategoryId == cat.id) ||
+                        (state.selectedCategoryId == null && selectedCategory == catValue);
                     return _buildCategoryPill(
                       label: cat.name ?? '',
                       value: catValue,
-                      isSelected: selectedCategory == catValue,
+                      isSelected: isCatSelected,
                       isDark: isDark,
                       category: cat,
                     );
                   }),
                   Padding(
-                    padding: const EdgeInsets.only(left: 4, right: 8),
+                    padding: const EdgeInsets.only(left: 4, right: 6),
+                    child: ActionChip(
+                      avatar: const Icon(
+                        Icons.grid_view_rounded,
+                        size: 15,
+                        color: AppColors.primary,
+                      ),
+                      label: const Text(
+                        'View All',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      backgroundColor: AppColors.primary
+                          .withValues(alpha: isDark ? 0.15 : 0.08),
+                      side: BorderSide(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      onPressed: () => CategoriesOverviewDialog.show(context),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, right: 8),
                     child: ActionChip(
                       avatar: const Icon(
                         Icons.add_rounded,
@@ -519,25 +574,37 @@ class _ProductsScreenState extends State<ProductsScreen> {
     required String value,
     required bool isSelected,
     required bool isDark,
-    ProductCategoryRef? category,
+    GetCategoriesModel? category,
   }) {
+    final catCount = category?.count ?? 0;
+    final catImage = category?.imageUrl;
+    final isMainCat = category?.isMainCategory ?? false;
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Tooltip(
         message: category != null
             ? (isSelected
-                ? '$label (Tap to filter, long-press to edit/delete)'
-                : '$label (Long-press to edit/delete)')
+                ? '$label (ID: ${category.id}, $catCount products${isMainCat ? ' • Main' : ''} - Tap to filter, long-press to edit)'
+                : '$label (ID: ${category.id}, $catCount products${isMainCat ? ' • Main' : ''} - Tap to filter, long-press to edit)')
             : label,
         child: InkWell(
           onTap: () {
-            context.read<ProductsBloc>().add(ProductsCategoryChanged(value));
+            context.read<ProductsBloc>().add(
+              ProductsCategoryChanged(
+                value,
+                categoryId: category?.id,
+              ),
+            );
           },
           onLongPress: category != null ? () => _openEditCategory(category) : null,
           borderRadius: BorderRadius.circular(20),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: EdgeInsets.symmetric(
+              horizontal: category != null && catImage != null ? 10 : 14,
+              vertical: 7,
+            ),
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.primary
@@ -552,6 +619,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (catImage != null && catImage.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SafeNetworkImage(
+                      imageUrl: catImage,
+                      width: 18,
+                      height: 18,
+                      fit: BoxFit.cover,
+                      errorWidget: Icon(
+                        Icons.folder_outlined,
+                        size: 14,
+                        color: isSelected ? Colors.white70 : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Text(
                   label,
                   style: TextStyle(
@@ -564,6 +648,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               : AppColors.lightTextSecondary),
                   ),
                 ),
+                if (category != null && catCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$catCount',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                      ),
+                    ),
+                  ),
+                ],
                 if (category != null && isSelected) ...[
                   const SizedBox(width: 6),
                   InkWell(

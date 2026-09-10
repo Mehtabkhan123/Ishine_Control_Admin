@@ -595,9 +595,10 @@ class ProductsService {
     }
   }
 
-  /// Fetches product categories: `GET {{baseUrl}}/wp-json/wc/v3/products/categories`
-  Future<List<ProductCategoryRef>> fetchCategories({
-    int perPage = 100,
+  /// Fetches product categories: `GET {{baseUrl}}/wp-json/wc/v3/products/categories?per_page=50&page=1`
+  Future<List<GetCategoriesModel>> fetchCategories({
+    int page = 1,
+    int perPage = 50,
     String? baseUrl,
     String? consumerKey,
     String? consumerSecret,
@@ -629,6 +630,7 @@ class ProductsService {
     };
     final queryParams = <String, dynamic>{
       'per_page': perPage,
+      'page': page,
       'hide_empty': false,
     };
 
@@ -644,6 +646,8 @@ class ProductsService {
     final requestUri =
         '$effectiveBaseUrl${ApiEndpoints.wcV3Prefix}/products/categories';
 
+    debugPrint('--> GET $requestUri?per_page=$perPage&page=$page');
+
     try {
       final response = await _dio.get(
         requestUri,
@@ -656,15 +660,20 @@ class ProductsService {
         cancelToken: cancelToken,
       );
 
+      debugPrint('<-- HTTP ${response.statusCode} $requestUri');
+
       if (response.statusCode == 200 && response.data is List) {
-        return (response.data as List)
+        final categories = (response.data as List)
             .whereType<Map<String, dynamic>>()
-            .map((item) => ProductCategoryRef.fromJson(item))
+            .map((item) => GetCategoriesModel.fromJson(item))
             .toList();
+
+        debugPrint('📦 [ProductsService] Loaded ${categories.length} categories');
+        return categories;
       }
       return [];
     } catch (e) {
-      debugPrint('⚠️ [ProductsService] Failed to load categories: $e');
+      debugPrint('❌ [ProductsService] Error fetching categories: $e');
       return [];
     }
   }

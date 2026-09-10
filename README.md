@@ -3,6 +3,6 @@ A new Flutter project.
 
 /*
 git add .
-git commit -m "coupon feature add"
+git commit -m "payment,shipping,text,setting,system status"
 git push origin main
 */

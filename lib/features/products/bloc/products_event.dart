@@ -32,11 +32,12 @@ class ProductsSearchChanged extends ProductsEvent {
 
 class ProductsCategoryChanged extends ProductsEvent {
   final String category;
+  final int? categoryId;
 
-  const ProductsCategoryChanged(this.category);
+  const ProductsCategoryChanged(this.category, {this.categoryId});
 
   @override
-  List<Object?> get props => [category];
+  List<Object?> get props => [category, categoryId];
 }
 
 class ProductsCategoryAdded extends ProductsEvent {

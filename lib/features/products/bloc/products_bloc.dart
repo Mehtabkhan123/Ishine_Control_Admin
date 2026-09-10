@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/config/env_config.dart';
 import '../../../../core/network/network_exceptions.dart';
+import '../data/models/get_categories_model.dart';
 import '../data/models/post_create_model.dart';
 import '../data/repositories/products_repository.dart';
 import 'products_event.dart';
@@ -51,7 +52,19 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   ) {
     if (state is ProductsSuccess) {
       final currentState = state as ProductsSuccess;
-      emit(currentState.copyWith(selectedCategory: event.category));
+      emit(currentState.copyWith(
+        selectedCategory: event.category,
+        selectedCategoryId: event.categoryId,
+        clearCategoryId: event.categoryId == null,
+      ));
+    } else if (state is ProductsEmpty) {
+      final currentState = state as ProductsEmpty;
+      emit(ProductsEmpty(
+        categories: currentState.categories,
+        selectedCategory: event.category,
+        selectedCategoryId: event.categoryId,
+        searchQuery: currentState.searchQuery,
+      ));
     }
   }
 
@@ -68,7 +81,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
           (c.name != null && event.category.name != null && c.name?.toLowerCase() == event.category.name?.toLowerCase()));
 
       if (!alreadyExists) {
-        final updated = List<ProductCategoryRef>.from(existing)..add(event.category);
+        final updated = List<GetCategoriesModel>.from(existing)..add(event.category);
         emit(currentState.copyWith(categories: updated));
       }
     } else if (state is ProductsEmpty) {
@@ -80,10 +93,11 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
           (c.name != null && event.category.name != null && c.name?.toLowerCase() == event.category.name?.toLowerCase()));
 
       if (!alreadyExists) {
-        final updated = List<ProductCategoryRef>.from(existing)..add(event.category);
+        final updated = List<GetCategoriesModel>.from(existing)..add(event.category);
         emit(ProductsEmpty(
           categories: updated,
           selectedCategory: currentState.selectedCategory,
+          selectedCategoryId: currentState.selectedCategoryId,
           searchQuery: currentState.searchQuery,
         ));
       }
@@ -118,6 +132,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       emit(ProductsEmpty(
         categories: updatedCategories,
         selectedCategory: currentState.selectedCategory,
+        selectedCategoryId: currentState.selectedCategoryId,
         searchQuery: currentState.searchQuery,
       ));
     }
@@ -131,39 +146,46 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       final currentState = state as ProductsSuccess;
       final deletedCat = currentState.categories.firstWhere(
         (c) => c.id == event.categoryId,
-        orElse: () => ProductCategoryRef(id: event.categoryId),
+        orElse: () => GetCategoriesModel(id: event.categoryId),
       );
       final updatedCategories = currentState.categories
           .where((c) => c.id != event.categoryId)
           .toList();
 
       var newSelectedCat = currentState.selectedCategory;
-      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name) {
+      int? newSelectedCatId = currentState.selectedCategoryId;
+      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name || newSelectedCatId == event.categoryId) {
         newSelectedCat = 'all';
+        newSelectedCatId = null;
       }
 
       emit(currentState.copyWith(
         categories: updatedCategories,
         selectedCategory: newSelectedCat,
+        selectedCategoryId: newSelectedCatId,
+        clearCategoryId: newSelectedCatId == null,
       ));
     } else if (state is ProductsEmpty) {
       final currentState = state as ProductsEmpty;
       final deletedCat = currentState.categories.firstWhere(
         (c) => c.id == event.categoryId,
-        orElse: () => ProductCategoryRef(id: event.categoryId),
+        orElse: () => GetCategoriesModel(id: event.categoryId),
       );
       final updatedCategories = currentState.categories
           .where((c) => c.id != event.categoryId)
           .toList();
 
       var newSelectedCat = currentState.selectedCategory;
-      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name) {
+      int? newSelectedCatId = currentState.selectedCategoryId;
+      if (newSelectedCat == deletedCat.slug || newSelectedCat == deletedCat.name || newSelectedCatId == event.categoryId) {
         newSelectedCat = 'all';
+        newSelectedCatId = null;
       }
 
       emit(ProductsEmpty(
         categories: updatedCategories,
         selectedCategory: newSelectedCat,
+        selectedCategoryId: newSelectedCatId,
         searchQuery: currentState.searchQuery,
       ));
     }
@@ -174,7 +196,11 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     Emitter<ProductsState> emit,
   ) async {
     try {
-      final freshCategories = await repository.getCategories(forceRefresh: true);
+      final freshCategories = await repository.getCategories(
+        page: 1,
+        perPage: 50,
+        forceRefresh: true,
+      );
       if (state is ProductsSuccess) {
         final currentState = state as ProductsSuccess;
         emit(currentState.copyWith(categories: freshCategories));
@@ -183,6 +209,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         emit(ProductsEmpty(
           categories: freshCategories,
           selectedCategory: currentState.selectedCategory,
+          selectedCategoryId: currentState.selectedCategoryId,
           searchQuery: currentState.searchQuery,
         ));
       }
@@ -200,6 +227,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         ProductsFailure(
           errorMessage: 'WooCommerce credentials missing in .env file.',
           selectedCategory: state.selectedCategory,
+          selectedCategoryId: state.selectedCategoryId,
           searchQuery: state.searchQuery,
         ),
       );
@@ -214,6 +242,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       ProductsLoading(
         previousProducts: previousProducts,
         selectedCategory: state.selectedCategory,
+        selectedCategoryId: state.selectedCategoryId,
         searchQuery: state.searchQuery,
       ),
     );
@@ -224,27 +253,30 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
         forceRefresh: forceRefresh,
       );
       final categoriesFuture = repository.getCategories(
+        page: 1,
+        perPage: 50,
         forceRefresh: forceRefresh,
       );
 
-      final results = await Future.wait([productsFuture, categoriesFuture]);
-      final products = results[0].cast<dynamic>();
-      final categories = results[1].cast<dynamic>();
+      final products = await productsFuture;
+      final categories = await categoriesFuture;
 
       if (products.isEmpty) {
         emit(
           ProductsEmpty(
-            categories: categories.cast(),
+            categories: categories,
             selectedCategory: state.selectedCategory,
+            selectedCategoryId: state.selectedCategoryId,
             searchQuery: state.searchQuery,
           ),
         );
       } else {
         emit(
           ProductsSuccess(
-            products: products.cast(),
-            categories: categories.cast(),
+            products: products,
+            categories: categories,
             selectedCategory: state.selectedCategory,
+            selectedCategoryId: state.selectedCategoryId,
             searchQuery: state.searchQuery,
             lastUpdated: DateTime.now(),
           ),
@@ -262,14 +294,16 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
           isTimeout: isTimeout,
           isNetworkError: isNetwork,
           selectedCategory: state.selectedCategory,
+          selectedCategoryId: state.selectedCategoryId,
           searchQuery: state.searchQuery,
         ),
       );
     } catch (e) {
       emit(
         ProductsFailure(
-          errorMessage: 'Failed to load products: ${e.toString()}',
+          errorMessage: 'Failed to load WooCommerce catalog: ${e.toString()}',
           selectedCategory: state.selectedCategory,
+          selectedCategoryId: state.selectedCategoryId,
           searchQuery: state.searchQuery,
         ),
       );
